@@ -21,38 +21,37 @@ Antes de iniciar, certifique-se de ter o Flutter instalado em sua máquina. Cons
 
 Clone o repositório para sua máquina local:
 
-'''bash
+```bash
 git clone URL_DO_REPOSITORIO_FRONTEND
-'''
+```
 
 Navegue até o diretório do projeto:
 
-'''bash
+```bash
 cd NOME_DO_DIRETORIO_FRONTEND
-'''
+```
 
 Instale as dependências necessárias:
 
-'''bash
+```bash
 flutter pub get
-'''
+```
 
 ### Executando a aplicação
 
 Para iniciar o aplicativo em modo de desenvolvimento, execute:
 
-'''bash
+```bash
 flutter run
-'''
+```
 
 ## Construindo para produção
 
 Para gerar uma versão para produção do aplicativo, execute:
 
-´´´bash
+```bash
 flutter build apk --release
-´´´
-
+```
 
 Este comando irá gerar um APK para Android. Para outros sistemas operacionais, consulte a documentação do Flutter.
 
