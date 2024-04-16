@@ -49,9 +49,9 @@ flutter run
 
 Para gerar uma versão para produção do aplicativo, execute:
 
-'''bash
+´´´bash
 flutter build apk --release
-'''
+´´´
 
 
 Este comando irá gerar um APK para Android. Para outros sistemas operacionais, consulte a documentação do Flutter.
