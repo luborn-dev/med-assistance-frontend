@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
-import 'screens/signUp_screen.dart';
+import 'screens/signup_screen.dart';
+import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 
 void main() {
@@ -22,6 +23,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => const HomeScreen(),
         '/main': (context) => const MainScreen(),
         '/signup': (context) => const SignupScreen(),
+        '/login': (context) => const LoginScreen(),
       },
     );
   }

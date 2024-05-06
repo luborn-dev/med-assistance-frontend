@@ -36,7 +36,7 @@ class MainScreen extends StatelessWidget {
                 foregroundColor: Colors.black,
                 minimumSize: const Size(200, 40),
               ),
-              onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+              onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
               child: const Text('Login'),
             ),
             const SizedBox(height: 16),
