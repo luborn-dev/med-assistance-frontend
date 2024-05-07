@@ -10,12 +10,10 @@ class MainScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'MedAssistance',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-              ),
+            const Image(
+              image: AssetImage('assets/logo.png'),
+              width: 300, // Adjust size according to your preference
+              height: 300,
             ),
             const SizedBox(height: 8),
             const Text(
@@ -29,27 +27,27 @@ class MainScreen extends StatelessWidget {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(16)),
-                  side: BorderSide(width: 1, color: Colors.black),
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  side: BorderSide(width: 2, color: Colors.black),
                 ),
                 foregroundColor: Colors.black,
-                minimumSize: const Size(200, 40),
+                minimumSize: const Size(200, 60),
               ),
               onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-              child: const Text('Login'),
+              child: const Text('Login', style: TextStyle(fontSize: 32)),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 32),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(16)),
-                  side: BorderSide(width: 1, color: Colors.black),
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  side: BorderSide(width: 2, color: Colors.black),
                 ),
                 foregroundColor: Colors.black,
-                minimumSize: const Size(200, 40),
+                minimumSize: const Size(200, 60),
               ),
               onPressed: () => Navigator.pushReplacementNamed(context, '/signup'),
-              child: const Text('Cadastro'),
+              child: const Text('Cadastro', style: TextStyle(fontSize: 32)),
             ),
           ],
         ),

@@ -45,12 +45,10 @@ class _SignupScreenState extends State<SignupScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Cadastro',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+            const Image(
+              image: AssetImage('assets/logo.png'),
+              width: 200, // Adjust size according to your preference
+              height: 200,
             ),
             const SizedBox(height: 16),
             Form(
@@ -67,14 +65,13 @@ class _SignupScreenState extends State<SignupScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 24), // Gap before the button
+            const SizedBox(height: 24),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(16)),
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
                   side: BorderSide(width: 2, color: Colors.black),
                 ),
-                backgroundColor: Colors.white,
                 foregroundColor: Colors.black,
                 minimumSize: const Size(160, 40),
               ),

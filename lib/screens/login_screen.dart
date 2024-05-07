@@ -42,12 +42,10 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Login',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+            const Image(
+              image: AssetImage('assets/logo.png'),
+              width: 200, // Adjust size according to your preference
+              height: 200,
             ),
             const SizedBox(height: 16),
             Form(
@@ -95,8 +93,8 @@ class _LoginScreenState extends State<LoginScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(16)),
-                  side: BorderSide(width: 1, color: Colors.black),
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  side: BorderSide(width: 2, color: Colors.black),
                 ),
                 foregroundColor: Colors.black,
                 minimumSize: const Size(160, 40),

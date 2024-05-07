@@ -16,12 +16,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'My App',
+      title: 'MedAssistance',
       theme: ThemeData(
         textTheme: GoogleFonts.robotoTextTheme(),
         primarySwatch: Colors.blue,
         scaffoldBackgroundColor: const Color(0xffCAF4FF), // Default background color
-        elevatedButtonTheme: const ElevatedButtonThemeData(style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Color(0xff5AB2FF)))),
+        elevatedButtonTheme: const ElevatedButtonThemeData(style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Color(0xff7ad1e3)))),
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xffCAF4FF), // Apply same color to AppBar
           foregroundColor: Colors.black, // Customize text/icon color in AppBar
