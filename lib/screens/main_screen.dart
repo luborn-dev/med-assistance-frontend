@@ -13,7 +13,7 @@ class MainScreen extends StatelessWidget {
             const Text(
               'MedAssistance',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 32,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -21,18 +21,17 @@ class MainScreen extends StatelessWidget {
             const Text(
               'Bem-vindo!',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 24,
                 fontWeight: FontWeight.w300,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 64),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 shape: const RoundedRectangleBorder(
                   borderRadius: BorderRadius.all(Radius.circular(16)),
-                  side: BorderSide(width: 2, color: Colors.black),
+                  side: BorderSide(width: 1, color: Colors.black),
                 ),
-                backgroundColor: Colors.white,
                 foregroundColor: Colors.black,
                 minimumSize: const Size(200, 40),
               ),
@@ -44,9 +43,8 @@ class MainScreen extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 shape: const RoundedRectangleBorder(
                   borderRadius: BorderRadius.all(Radius.circular(16)),
-                  side: BorderSide(width: 2, color: Colors.black),
+                  side: BorderSide(width: 1, color: Colors.black),
                 ),
-                backgroundColor: Colors.white,
                 foregroundColor: Colors.black,
                 minimumSize: const Size(200, 40),
               ),

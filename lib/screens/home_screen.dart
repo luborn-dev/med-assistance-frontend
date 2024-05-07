@@ -1,29 +1,37 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Delay of 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      Navigator.pushReplacementNamed(context, '/main');
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'MedAssistance',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+            Image(
+              image: AssetImage('assets/logo.png'),
+              width: 300, // Adjust size according to your preference
+              height: 300,
             ),
-            const SizedBox(height: 16),
-            IconButton(
-              icon: const Icon(Icons.circle, size: 48),
-              onPressed: () {
-                Navigator.pushReplacementNamed(context, '/main');
-              },
-            ),
+            SizedBox(height: 16),
+            CircularProgressIndicator(color: Colors.black,), // Loading icon
           ],
         ),
       ),
