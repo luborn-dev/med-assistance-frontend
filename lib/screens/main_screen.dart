@@ -6,48 +6,63 @@ class MainScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
+      appBar: AppBar(
+        title: const Text('MedAssistance'),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pushReplacementNamed(context, '/login');
+          },
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0), // Padding around the buttons
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Image(
-              image: AssetImage('assets/logo.png'),
-              width: 300, // Adjust size according to your preference
-              height: 300,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Bem-vindo!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w300,
-              ),
-            ),
-            const SizedBox(height: 64),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          // Stretch buttons across the screen width
+          children: <Widget>[
             ElevatedButton(
+              onPressed: () {
+                Navigator.pushReplacementNamed(context, '/recording');
+              },
               style: ElevatedButton.styleFrom(
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
-                  side: BorderSide(width: 2, color: Colors.black),
-                ),
-                foregroundColor: Colors.black,
-                minimumSize: const Size(200, 60),
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.blue,
+                // Text color
+                padding: const EdgeInsets.symmetric(
+                    vertical: 16.0), // Button padding
               ),
-              onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-              child: const Text('Login', style: TextStyle(fontSize: 32)),
+              child: const Text('Gravar Procedimento'),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 20), // Space between buttons
             ElevatedButton(
+              onPressed: () {
+                // Logic for Gerenciar Gravações
+              },
               style: ElevatedButton.styleFrom(
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
-                  side: BorderSide(width: 2, color: Colors.black),
-                ),
-                foregroundColor: Colors.black,
-                minimumSize: const Size(200, 60),
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.blue,
+                // Text color
+                padding: const EdgeInsets.symmetric(
+                    vertical: 16.0), // Button padding
               ),
-              onPressed: () => Navigator.pushReplacementNamed(context, '/signup'),
-              child: const Text('Cadastro', style: TextStyle(fontSize: 32)),
+              child: const Text('Gerenciar Gravações'),
+            ),
+            const SizedBox(height: 20), // Space between buttons
+            ElevatedButton(
+              onPressed: () {
+                // Logic for Minha Conta
+              },
+              style: ElevatedButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.blue,
+                // Text color
+                padding: const EdgeInsets.symmetric(
+                    vertical: 16.0), // Button padding
+              ),
+              child: const Text('Minha conda'),
             ),
           ],
         ),

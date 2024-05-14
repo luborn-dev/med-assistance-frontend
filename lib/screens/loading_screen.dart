@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class LoadingScreen extends StatefulWidget {
+  const LoadingScreen({super.key});
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  _LoadingScreenState createState() => _LoadingScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _LoadingScreenState extends State<LoadingScreen> {
   @override
   void initState() {
     super.initState();
     // Delay of 3 seconds
     Future.delayed(const Duration(seconds: 4), () {
-      Navigator.pushReplacementNamed(context, '/main');
+      Navigator.pushReplacementNamed(context, '/welcome');
     });
   }
 

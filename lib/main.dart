@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'screens/home_screen.dart';
+import 'screens/loading_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/welcome_screen.dart';
 import 'screens/main_screen.dart';
+import 'screens/recording_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -33,10 +35,12 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
       routes: {
-        '/': (context) => const HomeScreen(),
-        '/main': (context) => const MainScreen(),
-        '/signup': (context) => const SignupScreen(),
+        '/': (context) => const LoadingScreen(),
+        '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
+        '/signup': (context) => const SignupScreen(),
+        '/main': (context) => const MainScreen(),
+        '/recording': (context) => const RecordingScreen(),
       },
     );
   }

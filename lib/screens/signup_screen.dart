@@ -37,7 +37,7 @@ class _SignupScreenState extends State<SignupScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pushReplacementNamed(context, '/main');
+            Navigator.pushReplacementNamed(context, '/welcome');
           },
         ),
       ),
