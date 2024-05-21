@@ -25,7 +25,7 @@ class MainScreen extends StatelessWidget {
           children: <Widget>[
             ElevatedButton(
               onPressed: () {
-                Navigator.pushReplacementNamed(context, '/recording');
+                Navigator.pushReplacementNamed(context, '/preRecording');
               },
               style: ElevatedButton.styleFrom(
                 foregroundColor: Colors.white,
@@ -39,7 +39,7 @@ class MainScreen extends StatelessWidget {
             const SizedBox(height: 20), // Space between buttons
             ElevatedButton(
               onPressed: () {
-                // Logic for Gerenciar Gravações
+                Navigator.pushReplacementNamed(context, '/player');
               },
               style: ElevatedButton.styleFrom(
                 foregroundColor: Colors.white,
@@ -53,7 +53,7 @@ class MainScreen extends StatelessWidget {
             const SizedBox(height: 20), // Space between buttons
             ElevatedButton(
               onPressed: () {
-                // Logic for Minha Conta
+                Navigator.pushReplacementNamed(context, '/manageAccount');
               },
               style: ElevatedButton.styleFrom(
                 foregroundColor: Colors.white,

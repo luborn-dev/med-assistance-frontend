@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:med_assistance_frontend/screens/player_screen.dart';
+import 'package:med_assistance_frontend/screens/preRecording_screen.dart';
+import 'package:med_assistance_frontend/screens/profile_screen.dart';
 
 import 'screens/loading_screen.dart';
 import 'screens/signup_screen.dart';
@@ -41,6 +44,9 @@ class MyApp extends StatelessWidget {
         '/signup': (context) => const SignupScreen(),
         '/main': (context) => const MainScreen(),
         '/recording': (context) => const RecordingScreen(),
+        '/manageAccount': (context) => const ProfileScreen(),
+        '/preRecording': (context) => const PreRecordingScreen(),
+        '/player': (context) => const PlayRecordingScreen(filePath: "/data/user/0/com.example.med_assistance_frontend/app_flutter/myRecording.m4a"),
       },
     );
   }
