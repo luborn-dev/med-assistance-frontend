@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:med_assistance_frontend/screens/recording_screen.dart';
 
 class PreRecordingScreen extends StatefulWidget {
@@ -17,69 +15,27 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
   final TextEditingController _birthdateController = TextEditingController();
   String? _selectedProcedureType;
 
-  Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      // Mostrar um diálogo de carregamento
-      _showLoadingDialog();
-
-      var url = Uri.parse('http://10.0.2.2:8000/api/procedures');
-      var response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          'procedure_type': _selectedProcedureType,
-          'patient_name': _patientNameController.text,
-          'exact_procedure_name': _exactProcedureNameController.text,
-          'birthdate': _birthdateController.text,
-        }),
-      );
-
-      Navigator.of(context).pop(); // Fecha o diálogo de carregamento
-
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Procedimento salvo com sucesso!")),
-        );
-        // Navegar para a RecordingScreen com os dados
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const RecordingScreen(),
-          ),
-        );
-      } else {
-        print(jsonDecode(response.body));
-        var error = jsonDecode(response.body)['detail'];
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erro: $error")),
-        );
-      }
-    }
+  void _navigateToRecordingScreen(Map<String, dynamic> procedureData) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RecordingScreen(procedureData: procedureData),
+      ),
+    );
   }
 
-  void _showLoadingDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Dialog(
-          backgroundColor: Colors.transparent,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text(
-                  "Processando...",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+  Future<void> _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      var procedureData = {
+        'procedure_type': _selectedProcedureType,
+        'patient_name': _patientNameController.text,
+        'exact_procedure_name': _exactProcedureNameController.text,
+        'birthdate': _birthdateController.text,
+      };
+
+      // Navegar para a RecordingScreen com os dados do procedimento
+      _navigateToRecordingScreen(procedureData);
+    }
   }
 
   @override

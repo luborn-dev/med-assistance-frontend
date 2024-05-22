@@ -41,11 +41,11 @@ class _SignupScreenState extends State<SignupScreen> {
 
       Navigator.of(context).pop();
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Cadastro realizado com sucesso!")),
         );
-        await Future.delayed(const Duration(seconds: 2));
+        await Future.delayed(const Duration(seconds: 1));
         Navigator.pushReplacementNamed(context, '/welcome');
       } else {
         var error = jsonDecode(response.body)['detail'];

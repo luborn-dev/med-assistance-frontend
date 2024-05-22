@@ -7,7 +7,9 @@ import 'dart:io';
 import 'package:http_parser/http_parser.dart'; // Import necessário
 
 class RecordingScreen extends StatefulWidget {
-  const RecordingScreen({Key? key}) : super(key: key);
+  final Map<String, dynamic> procedureData; // Recebe os dados do procedimento
+
+  const RecordingScreen({Key? key, required this.procedureData}) : super(key: key);
 
   @override
   _RecordingScreenState createState() => _RecordingScreenState();
@@ -73,10 +75,15 @@ class _RecordingScreenState extends State<RecordingScreen> {
     }
   }
 
+
   Future<void> _sendRecording(String filePath) async {
     try {
       var url = Uri.parse('http://10.0.2.2:8000/api/procedures/upload');
       var request = http.MultipartRequest('POST', url)
+        ..fields['procedure_type'] = widget.procedureData['procedure_type']
+        ..fields['patient_name'] = widget.procedureData['patient_name']
+        ..fields['exact_procedure_name'] = widget.procedureData['exact_procedure_name']
+        ..fields['birthdate'] = widget.procedureData['birthdate']
         ..files.add(await http.MultipartFile.fromPath(
           'file',
           filePath,
@@ -86,6 +93,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
       var response = await request.send();
 
       if (response.statusCode == 200) {
+        print(await response.stream.bytesToString());
         print('Upload completo.');
       } else {
         print('Erro ao enviar o arquivo.');
