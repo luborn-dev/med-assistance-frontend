@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 
+import 'package:med_assistance_frontend/widget/gradient_container.dart';
+
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
 
@@ -21,18 +23,20 @@ class _LoadingScreenState extends State<LoadingScreen> {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image(
-              image: AssetImage('assets/logo.png'),
-              width: 300, // Adjust size according to your preference
-              height: 300,
-            ),
-            SizedBox(height: 16),
-            CircularProgressIndicator(color: Colors.black,), // Loading icon
-          ],
+      body: GradientContainer(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image(
+                image: AssetImage('assets/logo.png'),
+                width: 300, // Adjust size according to your preference
+                height: 300,
+              ),
+              SizedBox(height: 16),
+              CircularProgressIndicator(color: Colors.black,), // Loading icon
+            ],
+          ),
         ),
       ),
     );

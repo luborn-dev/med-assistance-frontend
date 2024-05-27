@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:med_assistance_frontend/widget/gradient_container.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -6,50 +7,53 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Image(
-              image: AssetImage('assets/logo.png'),
-              width: 300, // Adjust size according to your preference
-              height: 300,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Bem-vindo!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w300,
+      body: GradientContainer(
+        child: Container(
+          width: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Image(
+                image: AssetImage('assets/logo.png'),
+                width: 200,
+                height: 200,
               ),
-            ),
-            const SizedBox(height: 64),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
-                  side: BorderSide(width: 2, color: Colors.black),
+              const SizedBox(height: 64),
+              SizedBox(
+                width: 200, // Definindo uma largura mínima para os botões
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.blue,
+                    backgroundColor: Colors.white,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    elevation: 5,
+                  ),
+                  onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                  child: const Text('Login', style: TextStyle(fontSize: 20)),
                 ),
-                foregroundColor: Colors.black,
-                minimumSize: const Size(200, 60),
               ),
-              onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-              child: const Text('Login', style: TextStyle(fontSize: 32)),
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
-                  side: BorderSide(width: 2, color: Colors.black),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: 200, // Definindo uma largura mínima para os botões
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.blue,
+                    backgroundColor: Colors.white,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    elevation: 5,
+                  ),
+                  onPressed: () => Navigator.pushReplacementNamed(context, '/signup'),
+                  child: const Text('Cadastro', style: TextStyle(fontSize: 20)),
                 ),
-                foregroundColor: Colors.black,
-                minimumSize: const Size(200, 60),
               ),
-              onPressed: () => Navigator.pushReplacementNamed(context, '/signup'),
-              child: const Text('Cadastro', style: TextStyle(fontSize: 32)),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

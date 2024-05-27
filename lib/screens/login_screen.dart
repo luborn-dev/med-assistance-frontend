@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'package:med_assistance_frontend/widget/gradient_container.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -12,7 +14,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _rememberPassword = false;
   final _formKey = GlobalKey<FormState>();
 
   void _login() async {
@@ -20,34 +21,41 @@ class _LoginScreenState extends State<LoginScreen> {
       _showLoadingDialog();
       var startTime = DateTime.now();
 
-      var url = Uri.parse('http://10.0.2.2:8000/api/users/login');
-      var response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          'email': _emailController.text,
-          'password': _passwordController.text,
-        }),
-      );
-
-      var endTime = DateTime.now();
-      var difference = endTime.difference(startTime);
-      if (difference < const Duration(seconds: 2)) {
-        await Future.delayed(const Duration(seconds: 2) - difference);
-      }
-
-      Navigator.of(context).pop(); // Fecha o diálogo de carregamento
-
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Login realizado com sucesso!")),
+      try {
+        var url = Uri.parse('http://10.0.2.2:8000/api/users/login');
+        var response = await http.post(
+          url,
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({
+            'email': _emailController.text,
+            'password': _passwordController.text,
+          }),
         );
-        await Future.delayed(const Duration(seconds: 2));
-        Navigator.pushReplacementNamed(context, '/main');
-      } else {
-        var error = jsonDecode(response.body)['detail'];
+
+        var endTime = DateTime.now();
+        var difference = endTime.difference(startTime);
+        if (difference < const Duration(seconds: 2)) {
+          await Future.delayed(const Duration(seconds: 2) - difference);
+        }
+
+        Navigator.of(context).pop(); // Fecha o diálogo de carregamento
+
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Login realizado com sucesso!")),
+          );
+          await Future.delayed(const Duration(milliseconds: 50));
+          Navigator.pushReplacementNamed(context, '/main');
+        } else {
+          var error = jsonDecode(response.body)['detail'];
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Erro: $error")),
+          );
+        }
+      } catch (e) {
+        Navigator.of(context).pop(); // Fecha o diálogo de carregamento
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erro: $error")),
+          const SnackBar(content: Text("Erro interno. Por favor, tente novamente mais tarde.")),
         );
       }
     }
@@ -58,9 +66,13 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return const Dialog(
-          backgroundColor: Colors.transparent,
-          child: Center(
+        return Dialog(
+          backgroundColor: Colors.white.withOpacity(0.9),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: const Padding(
+            padding: EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -68,7 +80,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(height: 16),
                 Text(
                   "Processando...",
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 16,
+                  ),
                 ),
               ],
             ),
@@ -88,84 +103,79 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pushReplacementNamed(context, '/welcome');
-          },
-        ),
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Image(
-                  image: AssetImage('assets/logo.png'),
-                  width: 200,
-                  height: 200,
-                ),
-                const SizedBox(height: 16),
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      _buildTextField(_emailController, 'E-mail'),
-                      const SizedBox(height: 16),
-                      _buildTextField(_passwordController, 'Senha', obscureText: true),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.center,
-                        child: TextButton(
-                          onPressed: () {
-                            // Handle forgot password logic
-                          },
-                          child: const Text(
-                            'Esqueci a senha',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.black,
+      body: GradientContainer(
+        child: Stack(
+          children: [
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Image(
+                      image: AssetImage('assets/logo.png'),
+                      width: 200,
+                      height: 200,
+                    ),
+                    const SizedBox(height: 32),
+                    Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          _buildTextField(_emailController, 'E-mail'),
+                          const SizedBox(height: 16),
+                          _buildTextField(_passwordController, 'Senha', obscureText: true),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.center,
+                            child: TextButton(
+                              onPressed: () {
+                                // Handle forgot password logic
+                              },
+                              child: const Text(
+                                'Esqueci a senha',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Checkbox(
-                            value: _rememberPassword,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                _rememberPassword = value ?? false;
-                              });
-                            },
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: 200, // Ajuste da largura do botão
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                foregroundColor: Colors.blue,
+                                backgroundColor: Colors.white,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                elevation: 5,
+                              ),
+                              onPressed: _login,
+                              child: const Text('Login', style: TextStyle(fontSize: 20)),
+                            ),
                           ),
-                          const Text('Remember password'),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
-                      side: BorderSide(width: 2, color: Colors.black),
                     ),
-                    foregroundColor: Colors.black,
-                    minimumSize: const Size(160, 40),
-                  ),
-                  onPressed: _login,
-                  child: const Text('Login'),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+            Positioned(
+              top: 32,
+              left: 16,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () {
+                  Navigator.pushReplacementNamed(context, '/welcome');
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -181,9 +191,11 @@ class _LoginScreenState extends State<LoginScreen> {
         obscureText: obscureText,
         decoration: InputDecoration(
           labelText: label,
+          filled: true,
+          fillColor: Colors.white.withOpacity(0.8),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(width: 2, color: Colors.black),
+            borderSide: const BorderSide(width: 2, color: Colors.white),
           ),
         ),
         validator: (value) {
