@@ -1,9 +1,15 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:med_assistance_frontend/widget/gradient_container.dart';  // Importe o widget GradientContainer
+import 'package:med_assistance_frontend/widget/gradient_container.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
+
+  void _logout(context) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    Navigator.pushReplacementNamed(context, '/login');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +26,10 @@ class MainScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     const Text(
                       "Procedimentos",
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
                     ),
                     const SizedBox(height: 16),
                     GridView.count(
@@ -30,14 +39,24 @@ class MainScreen extends StatelessWidget {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
-                        _buildCategoryCard('Iniciar nova gravação', Icons.mic, context, "/preRecording"),
-                        _buildCategoryCard('Gerenciar gravações', Icons.manage_history, context, "/player"),
+                        _buildCategoryCard(
+                            'Cadastrar novo Paciente',
+                            Icons.health_and_safety,
+                            context,
+                            "/patientregistration"),
+                        _buildCategoryCard('Iniciar nova gravação', Icons.mic,
+                            context, "/preRecording"),
+                        _buildCategoryCard('Gerenciar gravações',
+                            Icons.manage_history, context, "/manageRecordings"),
                       ],
                     ),
                     const SizedBox(height: 16),
                     const Text(
                       "Geral",
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
                     ),
                     const SizedBox(height: 16),
                     GridView.count(
@@ -47,7 +66,8 @@ class MainScreen extends StatelessWidget {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
-                        _buildCategoryCard('Minha conta', Icons.manage_accounts, context, "/manageAccount"),
+                        _buildCategoryCard('Minha conta', Icons.manage_accounts,
+                            context, "/manageAccount"),
                         _buildCategoryCard('FAQ', Icons.help, context, "/faq"),
                       ],
                     ),
@@ -71,7 +91,8 @@ class MainScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryCard(String title, IconData icon, BuildContext context, String route) {
+  Widget _buildCategoryCard(
+      String title, IconData icon, BuildContext context, String route) {
     return GestureDetector(
       onTap: () {
         Navigator.pushReplacementNamed(context, route);
@@ -80,7 +101,7 @@ class MainScreen extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           color: Colors.white.withOpacity(0.9),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
               color: Colors.black26,
               blurRadius: 4,
@@ -154,7 +175,7 @@ class MainScreen extends StatelessWidget {
               child: const Text('Sim'),
               onPressed: () {
                 Navigator.of(context).pop();
-                Navigator.pushReplacementNamed(context, '/login');
+                _logout(context);
               },
             ),
           ],

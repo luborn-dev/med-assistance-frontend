@@ -74,6 +74,9 @@ class _RecordingScreenState extends State<RecordingScreen> {
         await _sendRecording(path);
       } else {
         print('Recording file is empty or does not exist.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Recording file is empty or does not exist.")),
+        );
       }
     }
   }
@@ -85,7 +88,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
         ..fields['procedure_type'] = widget.procedureData['procedure_type']
         ..fields['patient_name'] = widget.procedureData['patient_name']
         ..fields['exact_procedure_name'] =
-            widget.procedureData['exact_procedure_name']
+        widget.procedureData['exact_procedure_name']
         ..fields['birthdate'] = widget.procedureData['birthdate']
         ..files.add(await http.MultipartFile.fromPath(
           'file',
@@ -99,13 +102,22 @@ class _RecordingScreenState extends State<RecordingScreen> {
       if (response.statusCode == 200) {
         print(await response.stream.bytesToString());
         print('Upload completo.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Gravação realizada com sucesso.")),
+        );
       } else {
         print('Erro ao enviar o arquivo.');
         print('Status Code: ${response.statusCode}');
         print('Response: ${await response.stream.bytesToString()}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro ao realizar gravação, tente novamente mais tarde ou entre em contato com a nossa equipe.')),
+        );
       }
     } catch (e) {
       print('Erro ao enviar o arquivo: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error uploading file: $e')),
+      );
     }
   }
 

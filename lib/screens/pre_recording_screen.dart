@@ -149,7 +149,7 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      _buildLabeledTextField("Nome do Paciente", _patientNameController),
+                      _buildLabeledTextField("Paciente", _patientNameController),
                       const SizedBox(height: 20),
                       _buildProcedureNameField(),
                       const SizedBox(height: 20),

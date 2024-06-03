@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class GradientContainer extends StatelessWidget {
   final Widget child;
@@ -30,12 +33,118 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final TextEditingController _nameController = TextEditingController(text: "Marcos Silva Caetano");
-  final TextEditingController _crmController = TextEditingController(text: "CRM/SP 123355");
-  final TextEditingController _cpfController = TextEditingController(text: "111.222.333-77");
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _affiliationController = TextEditingController();
 
-  bool _isEditingPassword = false;
-  final TextEditingController _passwordController = TextEditingController(text: "**************");
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _emailController.text = prefs.getString('email') ?? 'Erro';
+        _usernameController.text = prefs.getString('userName') ?? 'Erro';
+        _affiliationController.text = prefs.getString('affiliation') ?? 'Erro';
+      });
+    } catch (e) {
+      print("Erro ao carregar dados do usuário: $e");
+    }
+  }
+
+  Future<void> _saveUserData() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('email', _emailController.text);
+      await prefs.setString('userName', _usernameController.text);
+      await prefs.setString('affiliation', _affiliationController.text);
+    } catch (e) {
+      print("Erro ao salvar dados do usuário: $e");
+    }
+  }
+
+  Future<void> _updatePassword(String oldPassword, String newPassword) async {
+    try {
+      var url = Uri.parse('http://10.0.2.2:8000/api/users/update_password');
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      var email = prefs.getString('email');
+      var response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          'email': email,
+          'old_password': oldPassword,
+          'new_password': newPassword,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print("Password updated successfully");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Senha atualizada com sucesso!")),
+        );
+      } else {
+        var error = jsonDecode(response.body)['detail'];
+        print("Failed to update password. Error: $error");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erro ao atualizar a senha: $error")),
+        );
+      }
+    } catch (e) {
+      print("Error updating password: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Erro interno. Por favor, tente novamente mais tarde.")),
+      );
+    }
+  }
+
+  void _showChangePasswordDialog() {
+    final TextEditingController oldPasswordController = TextEditingController();
+    final TextEditingController newPasswordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Mudar Senha'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: oldPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Senha Antiga'),
+              ),
+              TextField(
+                controller: newPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Nova Senha'),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Confirmar'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _updatePassword(oldPasswordController.text, newPasswordController.text);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _showConfirmationDialog() {
     showDialog(
@@ -55,7 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: const Text('Sim'),
               onPressed: () {
                 Navigator.of(context).pop();
-                // Adicione a lógica para aplicar as mudanças aqui
+                _saveUserData();
               },
             ),
           ],
@@ -76,13 +185,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildLabeledTextField("Usuário", _nameController),
+                    _buildLabeledTextField("Email", _emailController),
                     const SizedBox(height: 10),
-                    _buildLabeledTextField("CRM", _crmController),
+                    _buildLabeledTextField("Usuário", _usernameController),
                     const SizedBox(height: 10),
-                    _buildLabeledTextField("CPF", _cpfController),
+                    _buildLabeledTextField("Afiliação", _affiliationController),
                     const SizedBox(height: 20),
-                    _buildPasswordField(),
+                    SizedBox(
+                      width: 200, // Definir largura fixa para o botão
+                      child: ElevatedButton(
+                        onPressed: _showChangePasswordDialog,
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.blue,
+                          backgroundColor: Colors.white,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          elevation: 5,
+                        ),
+                        child: const Text('Mudar Senha', style: TextStyle(fontSize: 20)),
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     SizedBox(
                       width: 200, // Definir largura fixa para o botão
@@ -126,7 +250,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 16,
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -145,51 +269,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: const BorderSide(width: 2, color: Colors.white),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPasswordField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Alterar senha',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 5),
-        ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: 280,
-          ),
-          child: TextField(
-            controller: _passwordController,
-            obscureText: !_isEditingPassword,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.white.withOpacity(0.8),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(width: 2, color: Colors.white),
-              ),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _isEditingPassword ? Icons.visibility : Icons.visibility_off,
-                  color: Colors.blue,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _isEditingPassword = !_isEditingPassword;
-                  });
-                },
               ),
             ),
           ),

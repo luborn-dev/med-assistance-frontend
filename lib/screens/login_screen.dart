@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 import 'package:med_assistance_frontend/widget/gradient_container.dart';
@@ -41,6 +42,13 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.of(context).pop(); // Fecha o diálogo de carregamento
 
         if (response.statusCode == 200) {
+          var userData = jsonDecode(response.body);
+          print("Login successful. User data: $userData"); // Log dos dados do usuário
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('email', userData['email']);
+          await prefs.setString('userName', userData['username']); // Supondo que o nome do usuário esteja na resposta
+          await prefs.setString('affiliation', userData['affiliation']); // Supondo que o nome do usuário esteja na resposta
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Login realizado com sucesso!")),
           );
@@ -48,12 +56,14 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.pushReplacementNamed(context, '/main');
         } else {
           var error = jsonDecode(response.body)['detail'];
+          print("Login failed. Error: $error"); // Log do erro
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("Erro: $error")),
           );
         }
       } catch (e) {
         Navigator.of(context).pop(); // Fecha o diálogo de carregamento
+        print("Internal error: $e"); // Log do erro interno
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Erro interno. Por favor, tente novamente mais tarde.")),
         );
@@ -125,22 +135,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           _buildTextField(_emailController, 'E-mail'),
                           const SizedBox(height: 16),
                           _buildTextField(_passwordController, 'Senha', obscureText: true),
-                          const SizedBox(height: 8),
-                          Align(
-                            alignment: Alignment.center,
-                            child: TextButton(
-                              onPressed: () {
-                                // Handle forgot password logic
-                              },
-                              child: const Text(
-                                'Esqueci a senha',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
                           const SizedBox(height: 24),
                           SizedBox(
                             width: 200, // Ajuste da largura do botão
