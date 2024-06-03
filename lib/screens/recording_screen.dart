@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'package:http_parser/http_parser.dart'; // Import necessário
+import 'package:shared_preferences/shared_preferences.dart'; // Import para SharedPreferences
 
 class RecordingScreen extends StatefulWidget {
   final Map<String, dynamic> procedureData; // Recebe os dados do procedimento
@@ -21,6 +22,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
   final record = AudioRecorder();
   bool isRecording = false;
   String? recordingPath;
+  String? doctorId;
 
   @override
   void initState() {
@@ -28,6 +30,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
     prepareRecordingPath().then((_) {
       requestPermission();
     });
+    _loadDoctorId(); // Carrega o doctorId
   }
 
   Future<void> prepareRecordingPath() async {
@@ -41,9 +44,9 @@ class _RecordingScreenState extends State<RecordingScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text("Permission Needed"),
+          title: const Text("Permissão necessária"),
           content: const Text(
-              "This app requires microphone access to record audio."),
+              "Esse app requer acesso ao microfone para gravar aúdio."),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -53,6 +56,13 @@ class _RecordingScreenState extends State<RecordingScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _loadDoctorId() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      doctorId = prefs.getString('doctorId') ?? '';
+    });
   }
 
   Future<void> toggleRecording() async {
@@ -83,18 +93,23 @@ class _RecordingScreenState extends State<RecordingScreen> {
 
   Future<void> _sendRecording(String filePath) async {
     try {
+      print({
+        'procedure_type': widget.procedureData['procedure_type'],
+        'patient_name': widget.procedureData['patient_name'],
+        'exact_procedure_name': widget.procedureData['exact_procedure_name'],
+        'doctor_id': doctorId,
+      });
+
       var url = Uri.parse('http://10.0.2.2:8000/api/procedures/upload');
       var request = http.MultipartRequest('POST', url)
         ..fields['procedure_type'] = widget.procedureData['procedure_type']
         ..fields['patient_name'] = widget.procedureData['patient_name']
-        ..fields['exact_procedure_name'] =
-        widget.procedureData['exact_procedure_name']
-        ..fields['birthdate'] = widget.procedureData['birthdate']
+        ..fields['exact_procedure_name'] = widget.procedureData['exact_procedure_name']
+        ..fields['doctor_id'] = doctorId ?? '' // Adiciona o doctorId
         ..files.add(await http.MultipartFile.fromPath(
           'file',
           filePath,
-          contentType: MediaType(
-              'audio', 'mp4'), // Definindo explicitamente o tipo de mídia
+          contentType: MediaType('audio', 'mp4'),
         ));
 
       var response = await request.send();
@@ -102,9 +117,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
       if (response.statusCode == 200) {
         print(await response.stream.bytesToString());
         print('Upload completo.');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Gravação realizada com sucesso.")),
-        );
+        _showSuccessPopup();
       } else {
         print('Erro ao enviar o arquivo.');
         print('Status Code: ${response.statusCode}');
@@ -116,9 +129,29 @@ class _RecordingScreenState extends State<RecordingScreen> {
     } catch (e) {
       print('Erro ao enviar o arquivo: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error uploading file: $e')),
+        SnackBar(content: Text('Erro subindo a gravação:  $e')),
       );
     }
+  }
+
+  void _showSuccessPopup() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Sucesso"),
+        content: const Text("Gravação realizada com sucesso."),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+
+    Future.delayed(const Duration(seconds: 3), () {
+      Navigator.pushReplacementNamed(context, '/main');
+    });
   }
 
   @override
@@ -137,7 +170,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
                   iconSize: 100,
                 ),
                 const SizedBox(height: 24),
-                Text(isRecording ? "Tap to Stop" : "Tap to Record"),
+                Text(isRecording ? "Toque para Parar" : "Toque para Iniciar"),
               ],
             ),
           ),

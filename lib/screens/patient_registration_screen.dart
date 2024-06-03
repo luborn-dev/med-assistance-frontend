@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:med_assistance_frontend/widget/gradient_container.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PatientRegistrationScreen extends StatefulWidget {
   const PatientRegistrationScreen({Key? key}) : super(key: key);
@@ -19,6 +20,7 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
   final TextEditingController _cpfController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   String? _selectedHealthPlan;
+  String? _doctorId;
 
   final _cpfFormatter = MaskTextInputFormatter(
     mask: '###.###.###-##',
@@ -29,6 +31,19 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
     mask: '(##) #####-####',
     filter: {"#": RegExp(r'[0-9]')},
   );
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDoctorId();
+  }
+
+  Future<void> _loadDoctorId() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _doctorId = prefs.getString('doctorId');
+    });
+  }
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -60,6 +75,7 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
           'cpf': _cpfController.text,
           'phone': _phoneController.text,
           'health_plan': _selectedHealthPlan,
+          'doctor_id': _doctorId,
         }),
       );
 

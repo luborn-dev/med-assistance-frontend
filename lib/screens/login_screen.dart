@@ -43,11 +43,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (response.statusCode == 200) {
           var userData = jsonDecode(response.body);
-          print("Login successful. User data: $userData"); // Log dos dados do usuário
+          print("Login successful. User data: $userData");
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setString('email', userData['email']);
-          await prefs.setString('userName', userData['username']); // Supondo que o nome do usuário esteja na resposta
-          await prefs.setString('affiliation', userData['affiliation']); // Supondo que o nome do usuário esteja na resposta
+          await prefs.setString('userName', userData['username']);
+          await prefs.setString('affiliation', userData['affiliation']);
+          await prefs.setString('doctorId', userData['id']);
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Login realizado com sucesso!")),
