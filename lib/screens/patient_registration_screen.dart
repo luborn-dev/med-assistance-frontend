@@ -64,7 +64,9 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
     if (_formKey.currentState!.validate()) {
       _showLoadingDialog();
 
-      var url = Uri.parse('http://10.0.2.2:8000/api/patients');
+      var url = Uri.parse('http://172.20.10.3:8000/api/patients');
+      var addressText = _addressController.text;
+      print("aq: $addressText");
       var response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},

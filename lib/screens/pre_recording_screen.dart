@@ -23,6 +23,9 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
   List<String> _filteredProcedureOptions = [];
   List<Map<String, dynamic>> _patients = [];
 
+  bool _isPatientListEmpty = false; // Flag para indicar se lista de pacientes está vazia
+  bool _isLoading = true; // Flag para indicar se está carregando os dados
+
   final Map<String, List<String>> _procedureOptions = {
     'Cirurgias': List.from(cirurgias)..sort(),
     'Consulta': List.from(consultas)..sort(),
@@ -48,12 +51,13 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
     print(doctorId);
 
     if (doctorId != null) {
-      var url = Uri.parse('http://10.0.2.2:8000/api/patients?doctor_id=$doctorId');
+      var url = Uri.parse('http://172.20.10.3:8000/api/patients?doctor_id=$doctorId');
       var response = await http.get(url, headers: {"Content-Type": "application/json"});
 
       if (response.statusCode == 200) {
         setState(() {
           _patients = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+          _isPatientListEmpty = _patients.isEmpty; // Verifica se a lista está vazia
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -61,6 +65,10 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
         );
       }
     }
+
+    setState(() {
+      _isLoading = false; // Desativa o estado de carregamento após completar o fetch
+    });
   }
 
   void _navigateToRecordingScreen(Map<String, dynamic> procedureData) {
@@ -94,6 +102,10 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
     }
   }
 
+  void _navigateToPatientRegistration() {
+    Navigator.pushNamed(context, '/patientregistration');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,99 +113,98 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
         child: Stack(
           children: [
             Center(
-              child: SingleChildScrollView(
+              child: _isLoading
+                  ? const CircularProgressIndicator() // Exibe indicador de carregamento enquanto os dados estão sendo buscados
+                  : SingleChildScrollView(
                 padding: const EdgeInsets.all(20.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      SizedBox(
-                        width: MediaQuery.of(context).size.width * 0.8,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    if (_isPatientListEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.all(16.0),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              "Tipo de Procedimento",
+                              'Nenhum paciente encontrado. Cadastre um paciente antes de continuar.',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 5),
-                            DropdownButtonFormField<String>(
-                              value: _selectedProcedureType,
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10.0),
+                            const SizedBox(height: 10),
+                            ElevatedButton(
+                              onPressed: _navigateToPatientRegistration,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16.0),
                                 ),
-                                filled: true,
-                                fillColor: Colors.white,
                               ),
-                              dropdownColor: Colors.white,
-                              items: _procedureOptions.keys
-                                  .map((label) => DropdownMenuItem(
-                                value: label,
-                                child: Text(label),
-                              ))
-                                  .toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedProcedureType = value;
-                                  _selectedExactProcedureName = null;
-                                  _filteredProcedureOptions = _procedureOptions[value] ?? [];
-                                  _filterProcedureOptions();
-                                });
-                              },
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Por favor, selecione o tipo de procedimento';
-                                }
-                                return null;
-                              },
+                              child: const Text(
+                                'Cadastrar Paciente',
+                                style: TextStyle(color: Colors.white),
+                              ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 20),
-                      _buildPatientField(),
-                      const SizedBox(height: 20),
-                      _buildProcedureNameField(),
-                      const SizedBox(height: 30),
-                      SizedBox(
-                        width: 150,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (_filteredProcedureOptions.contains(_selectedExactProcedureName)) {
-                              _submitForm();
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Por favor, preencha corretamente o nome do procedimento.'),
-                                  backgroundColor: Colors.red,
+                    ],
+                    if (!_isPatientListEmpty) ...[
+                      Form(
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            _buildProcedureTypeDropdown(),
+                            const SizedBox(height: 20),
+                            _buildPatientField(),
+                            const SizedBox(height: 20),
+                            _buildProcedureNameField(),
+                            const SizedBox(height: 30),
+                            SizedBox(
+                              width: 150,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  if (_filteredProcedureOptions.contains(_selectedExactProcedureName)) {
+                                    _submitForm();
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Por favor, preencha corretamente o nome do procedimento.'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16.0, horizontal: 32.0),
+                                  backgroundColor: Colors.blue,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16.0),
+                                  ),
                                 ),
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 32.0),
-                            backgroundColor: Colors.blue,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16.0),
+                                child: const Text(
+                                  'Continuar',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16.0,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                          child: const Text(
-                            'Continuar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16.0,
-                            ),
-                          ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -209,6 +220,57 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProcedureTypeDropdown() {
+    return SizedBox(
+      width: MediaQuery.of(context).size.width * 0.8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Tipo de Procedimento",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 5),
+          DropdownButtonFormField<String>(
+            value: _selectedProcedureType,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            dropdownColor: Colors.white,
+            items: _procedureOptions.keys
+                .map((label) => DropdownMenuItem(
+              value: label,
+              child: Text(label),
+            ))
+                .toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedProcedureType = value;
+                _selectedExactProcedureName = null;
+                _filteredProcedureOptions = _procedureOptions[value] ?? [];
+                _filterProcedureOptions();
+              });
+            },
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Por favor, selecione o tipo de procedimento';
+              }
+              return null;
+            },
+          ),
+        ],
       ),
     );
   }
@@ -253,7 +315,6 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
             onSuggestionSelected: (suggestion) {
               setState(() {
                 _patientController.text = suggestion['name'];
-
               });
             },
             validator: (value) {

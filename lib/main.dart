@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:med_assistance_frontend/screens/faq_screen.dart';
 import 'package:med_assistance_frontend/screens/loading_screen.dart';
 import 'package:med_assistance_frontend/screens/patient_registration_screen.dart';
 import 'package:med_assistance_frontend/screens/welcome_screen.dart';
@@ -44,6 +45,7 @@ class MyApp extends StatelessWidget {
         '/preRecording': (context) => const PreRecordingScreen(),
         '/manageRecordings': (context) =>  ManageRecordingsScreen(),
         '/patientregistration': (context) =>  PatientRegistrationScreen(),
+        '/faq' : (context) => FaqScreen()
       },
     );
   }

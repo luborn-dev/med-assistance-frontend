@@ -23,7 +23,6 @@ class MainScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 16),
                     const Text(
                       "Procedimentos",
                       style: TextStyle(
@@ -40,7 +39,7 @@ class MainScreen extends StatelessWidget {
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
                         _buildCategoryCard(
-                            'Cadastrar novo Paciente',
+                            'Cadastrar Paciente',
                             Icons.health_and_safety,
                             context,
                             "/patientregistration"),
@@ -77,12 +76,16 @@ class MainScreen extends StatelessWidget {
             ),
             Positioned(
               top: 16,
-              left: 16,
-              child: IconButton(
-                icon: const Icon(Icons.logout, color: Colors.white),
+              right: 16,
+              child: TextButton.icon(
                 onPressed: () {
                   _showLogoutConfirmationDialog(context);
                 },
+                icon: const Icon(Icons.logout, color: Colors.white),
+                label: const Text(
+                  'Sair',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],

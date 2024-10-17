@@ -23,7 +23,8 @@ class _LoginScreenState extends State<LoginScreen> {
       var startTime = DateTime.now();
 
       try {
-        var url = Uri.parse('http://10.0.2.2:8000/api/users/login');
+        // var url = Uri.parse('http://10.0.2.2:8000/api/users/login');
+        var url = Uri.parse('http://172.20.10.3:8000/api/users/login'); // Substitua pelo IP local da sua máquina
         var response = await http.post(
           url,
           headers: {"Content-Type": "application/json"},

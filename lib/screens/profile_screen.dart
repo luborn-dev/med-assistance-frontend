@@ -62,14 +62,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await prefs.setString('email', _emailController.text);
       await prefs.setString('userName', _usernameController.text);
       await prefs.setString('affiliation', _affiliationController.text);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Dados salvos com sucesso!")),
+      );
     } catch (e) {
       print("Erro ao salvar dados do usuário: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Erro ao salvar os dados.")),
+      );
     }
   }
 
   Future<void> _updatePassword(String oldPassword, String newPassword) async {
     try {
-      var url = Uri.parse('http://10.0.2.2:8000/api/users/update_password');
+      var url = Uri.parse('http://172.20.10.3:8000/api/users/update_password');
       SharedPreferences prefs = await SharedPreferences.getInstance();
       var email = prefs.getString('email');
       var response = await http.post(
@@ -83,13 +89,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
 
       if (response.statusCode == 200) {
-        print("Password updated successfully");
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Senha atualizada com sucesso!")),
         );
       } else {
         var error = jsonDecode(response.body)['detail'];
-        print("Failed to update password. Error: $error");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Erro ao atualizar a senha: $error")),
         );
@@ -185,43 +189,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildLabeledTextField("Email", _emailController),
+                    _buildLabeledTextField("Email", _emailController, "Digite seu email"),
                     const SizedBox(height: 10),
-                    _buildLabeledTextField("Usuário", _usernameController),
+                    _buildLabeledTextField("Usuário", _usernameController, "Digite seu usuário"),
                     const SizedBox(height: 10),
-                    _buildLabeledTextField("Afiliação", _affiliationController),
+                    _buildLabeledTextField("Afiliação", _affiliationController, "Digite sua afiliação"),
                     const SizedBox(height: 20),
                     SizedBox(
-                      width: 200, // Definir largura fixa para o botão
-                      child: ElevatedButton(
-                        onPressed: _showChangePasswordDialog,
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.blue,
-                          backgroundColor: Colors.white,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(12)),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          elevation: 5,
-                        ),
-                        child: const Text('Mudar Senha', style: TextStyle(fontSize: 20)),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: 200, // Definir largura fixa para o botão
+                      width: 220, // Definir largura fixa para o botão
                       child: ElevatedButton(
                         onPressed: _showConfirmationDialog,
                         style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.blue,
-                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.green.shade700,
                           shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.all(Radius.circular(12)),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           elevation: 5,
                         ),
-                        child: const Text('Aplicar', style: TextStyle(fontSize: 20)),
+                        child: const Text('Aplicar', style: TextStyle(fontSize: 18)),
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    SizedBox(
+                      width: 220, // Definir largura fixa para o botão
+                      child: ElevatedButton(
+                        onPressed: _showChangePasswordDialog,
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.blue.shade700,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          elevation: 5,
+                        ),
+                        child: const Text('Mudar Senha', style: TextStyle(fontSize: 18)),
                       ),
                     ),
                   ],
@@ -244,7 +248,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildLabeledTextField(String label, TextEditingController controller) {
+  Widget _buildLabeledTextField(String label, TextEditingController controller, String hintText) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -259,13 +263,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 5),
         ConstrainedBox(
           constraints: const BoxConstraints(
-            maxWidth: 280,
+            maxWidth: 300,
           ),
           child: TextField(
             controller: controller,
             decoration: InputDecoration(
               filled: true,
               fillColor: Colors.white.withOpacity(0.8),
+              hintText: hintText,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: const BorderSide(width: 2, color: Colors.white),

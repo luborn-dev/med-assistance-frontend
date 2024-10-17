@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Import para SharedPreferences
-
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/recording_service.dart';
 import '../widget/gradient_container.dart';
+import '../utils/pdf_exporter.dart';
+import '../widget/recording_card.dart';
+import '../widget/search_field.dart';
 
 class ManageRecordingsScreen extends StatefulWidget {
-  ManageRecordingsScreen({super.key});
-
   @override
   _ManageRecordingsScreenState createState() => _ManageRecordingsScreenState();
 }
@@ -20,12 +15,11 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
   List<dynamic> recordings = [];
   bool isLoading = true;
   String? doctorId;
-  String? errorMessage; // Novo estado para armazenar a mensagem de erro
+  String? errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _requestPermissions();
     _loadDoctorId().then((_) {
       fetchRecordings();
     });
@@ -38,55 +32,16 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
     });
   }
 
-  Future<void> showDeleteConfirmationDialog(String recordingId) async {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false, // user must tap button!
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirmar Exclusão'),
-          content: const SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                Text('Você tem certeza que deseja excluir este procedimento?'),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Cancelar'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('Confirmar'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                deleteRecording(recordingId);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<void> deleteRecording(String recordingId) async {
-    final response = await http.delete(
-      Uri.parse('http://10.0.2.2:8000/api/procedures/$recordingId'),
-      headers: {'Content-Type': 'application/json; charset=UTF-8'},
-    );
-
-    if (response.statusCode == 200) {
+    try {
+      await RecordingService.deleteRecording(recordingId);
       setState(() {
-        recordings.removeWhere((recording) => recording['_id'] == recordingId);
+        recordings.removeWhere((recording) => recording['id'] == recordingId);
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Procedimento deletado com sucesso')),
       );
-      await fetchRecordings();
-    } else {
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Falha ao deletar o procedimento')),
       );
@@ -95,7 +50,6 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
 
   Future<void> fetchRecordings() async {
     if (doctorId == null) {
-      // Trate o caso onde doctorId não está definido
       setState(() {
         isLoading = false;
         errorMessage = 'Doctor ID não está definido';
@@ -103,55 +57,25 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
       return;
     }
 
-    final response = await http.get(
-      Uri.parse('http://10.0.2.2:8000/api/procedures?doctor_id=$doctorId'),
-      headers: {'Content-Type': 'application/json; charset=UTF-8'},
-    );
-    if (response.statusCode == 200) {
-      setState(() {
-        recordings = json.decode(utf8.decode(response.bodyBytes));
+    try {
+      final recordingsData = await RecordingService.fetchRecordings(doctorId!);
 
+      setState(() {
+        if (recordingsData.isEmpty) {
+          errorMessage = 'Nenhum procedimento encontrado para este médico.';
+        } else {
+          recordings = recordingsData;
+          errorMessage = null;
+        }
         isLoading = false;
       });
-    } else if (response.statusCode == 404) {
-      // Handle 404 status
+    } catch (e) {
       setState(() {
         isLoading = false;
         errorMessage =
-            'Você não tem nenhum procedimento registrado em seu nome.';
-      });
-    } else {
-      // Handle other errors
-      setState(() {
-        isLoading = false;
-        errorMessage = 'Failed to load recordings';
+            'Erro ao se conectar ao servidor. Verifique sua conexão ou tente novamente mais tarde.';
       });
     }
-  }
-
-  Future<void> _exportToPDF(String title, String content) async {
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) => pw.Padding(
-          padding: const pw.EdgeInsets.all(20),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(title, style: pw.TextStyle(fontSize: 24)),
-              pw.SizedBox(height: 20),
-              pw.Text(content, style: pw.TextStyle(fontSize: 16)),
-            ],
-          ),
-        ),
-      ),
-    );
-    await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) async => pdf.save());
-  }
-
-  Future<void> _requestPermissions() async {
-    await [Permission.storage].request();
   }
 
   @override
@@ -169,109 +93,112 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
                         children: [
                           Text(
                             errorMessage!,
-                            style: const TextStyle(
-                              fontSize: 22,
-                            ),
+                            style: const TextStyle(fontSize: 22),
+                            textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
-                              onPressed: () =>
-                                  Navigator.pushNamed(context, "/main"),
-                              child: const Text("Voltar"))
+                            onPressed: () =>
+                                Navigator.pushNamed(context, "/main"),
+                            child: const Text("Voltar"),
+                          ),
                         ],
                       ),
                     )
-                  : Column(
-                      children: [
-                        const SizedBox(height: 10),
-                        TextField(
-                          decoration: InputDecoration(
-                            labelText: 'Buscar',
-                            prefixIcon: const Icon(Icons.search),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                  : recordings.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'Nenhum procedimento encontrado para este médico.',
+                                style: TextStyle(fontSize: 22),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () =>
+                                    Navigator.pushNamed(context, "/main"),
+                                child: const Text("Voltar"),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Column(
+                          children: [
+                            const SizedBox(height: 10),
+                            SearchField(
+                              onSearch: (value) {
+                                setState(() {
+                                  recordings = recordings.where((recording) {
+                                    final patientName =
+                                        recording['patient_name']
+                                                ?.toLowerCase() ??
+                                            '';
+                                    final procedureName =
+                                        recording['exact_procedure_name']
+                                                ?.toLowerCase() ??
+                                            '';
+                                    final searchTerm = value.toLowerCase();
+                                    return patientName.contains(searchTerm) ||
+                                        procedureName.contains(searchTerm);
+                                  }).toList();
+                                });
+                              },
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: recordings.length,
-                            itemBuilder: (context, index) {
-                              final recording = recordings[index];
-                              return Card(
-                                margin:
-                                    const EdgeInsets.symmetric(vertical: 10),
-                                child: ExpansionTile(
-                                  leading: const Icon(Icons.info_outline),
-                                  title: Text(
-                                      recording['exact_procedure_name'] ?? ''),
-                                  subtitle: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(recording['patient_name'] ?? ''),
-                                      Text(recording['procedure_type'] ?? ''),
-                                    ],
-                                  ),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.delete),
-                                    onPressed: () {
-                                      final recordingId = recording['id'];
-                                      showDeleteConfirmationDialog(recordingId);
+                            const SizedBox(height: 10),
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: recordings.length,
+                                itemBuilder: (context, index) {
+                                  final recording = recordings[index];
+                                  return RecordingCard(
+                                    recording: recording,
+                                    onDelete: (id) => deleteRecording(id),
+                                    onExportPDF: (title, content) {
+                                      PDFExporter.exportToPDF(
+                                        recording['procedure_type'] ?? '',
+                                        recording['exact_procedure_name'] ?? '',
+                                        recording['patient_name'] ?? '',
+                                        recording['patient_birthdate'] ?? '',
+                                        recording['patient_address'] ?? '',
+                                        recording['patient_cpf'] ?? '',
+                                        recording['patient_phone'] ?? '',
+                                        recording['doctor_name'] ?? '',
+                                        recording['doctor_email'] ?? '',
+                                        recording['doctor_affiliation'] ?? '',
+                                        recording['transcription'] ?? '',
+                                        recording['summarize'] ?? '',
+                                      );
                                     },
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: 200,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pushReplacementNamed(
+                                      context, '/main');
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue.shade700,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(12)),
                                   ),
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'Transcrição:',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold),
-                                          ),
-                                          const SizedBox(height: 5),
-                                          Text(
-                                            recording['transcription']?.length >
-                                                    200
-                                                ? '${recording['transcription'].substring(0, 200)}...'
-                                                : recording['transcription'] ??
-                                                    '',
-                                          ),
-                                          const SizedBox(height: 5),
-                                          IconButton(
-                                            icon: const Icon(
-                                                Icons.picture_as_pdf),
-                                            onPressed: () {
-                                              _exportToPDF(
-                                                recording[
-                                                        'exact_procedure_name'] ??
-                                                    '',
-                                                recording['transcription'] ??
-                                                    '',
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
                                 ),
-                              );
-                            },
-                          ),
+                                child: const Text('Retornar',
+                                    style: TextStyle(
+                                        fontSize: 18, color: Colors.white)),
+                              ),
+                            ),
+                          ],
                         ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.pushReplacementNamed(context, '/main');
-                          },
-                          child: const Text('Retornar'),
-                        ),
-                      ],
-                    ),
         ),
       ),
     );

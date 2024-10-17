@@ -24,7 +24,7 @@ class _SignupScreenState extends State<SignupScreen> {
       var startTime = DateTime.now();
 
       try {
-        var url = Uri.parse('http://10.0.2.2:8000/api/users/register');
+        var url = Uri.parse('http://172.20.10.3:8000/api/users/register');
         var response = await http.post(
           url,
           headers: {"Content-Type": "application/json"},
