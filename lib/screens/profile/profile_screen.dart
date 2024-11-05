@@ -1,29 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:med_assistance_frontend/services/access/user_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-
-class GradientContainer extends StatelessWidget {
-  final Widget child;
-
-  const GradientContainer({required this.child, Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue.shade200, Colors.blue.shade400],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-      child: SafeArea(
-        child: child,
-      ),
-    );
-  }
-}
+import 'package:med_assistance_frontend/components/background_container.dart';
+import 'package:med_assistance_frontend/utils/state_utils.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -33,9 +12,14 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _affiliationController = TextEditingController();
+  final TextEditingController _crmController = TextEditingController();
+  final TextEditingController _stateController = TextEditingController();
+  String userId = '';
+  bool _hasChanges = false;
+  bool _isLoading = false;
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -44,105 +28,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUserData() async {
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      setState(() {
-        _emailController.text = prefs.getString('email') ?? 'Erro';
-        _usernameController.text = prefs.getString('userName') ?? 'Erro';
-        _affiliationController.text = prefs.getString('affiliation') ?? 'Erro';
-      });
-    } catch (e) {
-      print("Erro ao carregar dados do usuário: $e");
-    }
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userId = prefs.getString('userId') ?? '';
+      _nameController.text = prefs.getString('name') ?? '';
+      _emailController.text = prefs.getString('email') ?? '';
+      final professionalId = prefs.getString('professionalId') ?? '';
+      _stateController.text = professionalId.split(' ').first.split('/')[1];
+      _crmController.text = professionalId.split(' ').last;
+    });
   }
 
   Future<void> _saveUserData() async {
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('email', _emailController.text);
-      await prefs.setString('userName', _usernameController.text);
-      await prefs.setString('affiliation', _affiliationController.text);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Dados salvos com sucesso!")),
-      );
-    } catch (e) {
-      print("Erro ao salvar dados do usuário: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erro ao salvar os dados.")),
-      );
-    }
-  }
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
 
-  Future<void> _updatePassword(String oldPassword, String newPassword) async {
-    try {
-      var url = Uri.parse('http://172.20.10.3:8000/api/users/update_password');
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      var email = prefs.getString('email');
-      var response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          'email': email,
-          'old_password': oldPassword,
-          'new_password': newPassword,
-        }),
-      );
+      final professionalId =
+          "CRM/${_stateController.text} ${_crmController.text}";
 
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Senha atualizada com sucesso!")),
+      try {
+        await UserService().updateUser(
+          userId,
+          _nameController.text,
+          _emailController.text,
+          professionalId,
         );
-      } else {
-        var error = jsonDecode(response.body)['detail'];
+
+        setState(() => _hasChanges = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erro ao atualizar a senha: $error")),
+          const SnackBar(content: Text("Perfil atualizado com sucesso!")),
         );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erro ao atualizar perfil: $e")),
+        );
+      } finally {
+        setState(() => _isLoading = false);
       }
-    } catch (e) {
-      print("Error updating password: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erro interno. Por favor, tente novamente mais tarde.")),
-      );
     }
   }
 
-  void _showChangePasswordDialog() {
-    final TextEditingController oldPasswordController = TextEditingController();
-    final TextEditingController newPasswordController = TextEditingController();
+  void _onFieldChange() {
+    setState(() => _hasChanges = true);
+  }
 
+  void _showDeleteAccountDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Mudar Senha'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: oldPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Senha Antiga'),
-              ),
-              TextField(
-                controller: newPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Nova Senha'),
-              ),
-            ],
-          ),
-          actions: <Widget>[
+          title: const Text("Confirmar Exclusão"),
+          content: const Text(
+              "Tem certeza de que deseja deletar sua conta? Essa ação é irreversível."),
+          actions: [
             TextButton(
-              child: const Text('Cancelar'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Cancelar"),
             ),
             TextButton(
-              child: const Text('Confirmar'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                _updatePassword(oldPasswordController.text, newPasswordController.text);
-              },
+              onPressed: _deleteAccount,
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text("Deletar Conta"),
             ),
           ],
         );
@@ -150,82 +96,104 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showConfirmationDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirmação'),
-          content: const Text('Você tem certeza que deseja aplicar as mudanças?'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancelar'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('Sim'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                _saveUserData();
-              },
-            ),
-          ],
-        );
-      },
-    );
+  Future<void> _deleteAccount() async {
+    Navigator.of(context).pop();
+    try {
+      await UserService().deleteUser(userId);
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      Navigator.pushReplacementNamed(context, '/login');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Conta deletada com sucesso.")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erro ao deletar conta: $e")),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          GradientContainer(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20.0),
+      body: BackgroundContainer(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Form(
+                key: _formKey,
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildLabeledTextField("Email", _emailController, "Digite seu email"),
-                    const SizedBox(height: 10),
-                    _buildLabeledTextField("Usuário", _usernameController, "Digite seu usuário"),
-                    const SizedBox(height: 10),
-                    _buildLabeledTextField("Afiliação", _affiliationController, "Digite sua afiliação"),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: 220, // Definir largura fixa para o botão
-                      child: ElevatedButton(
-                        onPressed: _showConfirmationDialog,
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.green.shade700,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(12)),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          elevation: 5,
-                        ),
-                        child: const Text('Aplicar', style: TextStyle(fontSize: 18)),
+                    const SizedBox(height: 16),
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: Colors.grey.shade300,
+                      child: Icon(
+                        Icons.person,
+                        size: 60,
+                        color: Colors.grey.shade700,
                       ),
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 32),
+                    _buildTextField(
+                      controller: _nameController,
+                      label: 'Nome Completo',
+                      icon: Icons.person,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _emailController,
+                      label: 'E-mail',
+                      icon: Icons.email,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildStateField(),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _crmController,
+                      label: 'CRM / Registro Profissional',
+                      icon: Icons.badge,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                    ),
+                    const SizedBox(height: 32),
                     SizedBox(
-                      width: 220, // Definir largura fixa para o botão
+                      width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _showChangePasswordDialog,
+                        onPressed: _hasChanges ? _saveUserData : null,
                         style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.blue.shade700,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(12)),
-                          ),
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          elevation: 5,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
-                        child: const Text('Mudar Senha', style: TextStyle(fontSize: 18)),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.0,
+                              )
+                            : const Text(
+                                'Salvar',
+                                style: TextStyle(fontSize: 18),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: Center(
+                        child: GestureDetector(
+                          onTap: _showDeleteAccountDialog,
+                          child: const Text(
+                            'Deletar Conta',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -233,52 +201,116 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ),
-          Positioned(
-            top: 32,
-            left: 16,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () {
-                Navigator.pushReplacementNamed(context, '/main');
-              },
-            ),
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: "Home",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_circle),
+            label: "Perfil",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.help_outline),
+            label: "FAQ",
           ),
         ],
+        currentIndex: 1,
+        onTap: (index) {
+          if (index == 0) Navigator.pushReplacementNamed(context, '/main');
+          if (index == 2) Navigator.pushReplacementNamed(context, '/faq');
+        },
       ),
     );
   }
 
-  Widget _buildLabeledTextField(String label, TextEditingController controller, String hintText) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    int? maxLength,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLength: maxLength,
+      onChanged: (_) => _onFieldChange(),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: Colors.grey),
+        filled: true,
+        fillColor: Colors.grey.shade100.withOpacity(0.8),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8.0),
+          borderSide: BorderSide.none,
         ),
-        const SizedBox(height: 5),
-        ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: 300,
-          ),
-          child: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.white.withOpacity(0.8),
-              hintText: hintText,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(width: 2, color: Colors.white),
-              ),
-            ),
-          ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8.0),
+          borderSide: const BorderSide(color: Colors.blue, width: 1.5),
         ),
-      ],
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Por favor, insira $label';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildStateField() {
+    return TextFormField(
+      controller: _stateController,
+      readOnly: true,
+      onTap: _showStatePicker,
+      decoration: InputDecoration(
+        labelText: 'Estado (UF)',
+        hintText: 'Selecione o Estado',
+        prefixIcon: const Icon(Icons.location_on, color: Colors.grey),
+        filled: true,
+        fillColor: Colors.grey.shade100.withOpacity(0.8),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8.0),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8.0),
+          borderSide: const BorderSide(color: Colors.blue, width: 1.5),
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Por favor, selecione o estado';
+        }
+        return null;
+      },
+    );
+  }
+
+  void _showStatePicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => ListView.builder(
+        itemCount: StateUtils.states.length,
+        itemBuilder: (context, index) => ListTile(
+          title: Text(StateUtils.states[index]),
+          onTap: () {
+            setState(() {
+              _stateController.text = StateUtils.states[index];
+              _onFieldChange();
+            });
+            Navigator.pop(context);
+          },
+        ),
+      ),
     );
   }
 }

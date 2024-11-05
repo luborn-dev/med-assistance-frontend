@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:med_assistance_frontend/components/background_container.dart';
-import 'package:med_assistance_frontend/services/access/signup_service.dart';
+import 'package:med_assistance_frontend/services/access/user_service.dart';
 import 'package:med_assistance_frontend/utils/state_utils.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -15,12 +15,12 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController _professionalIdController =
-      TextEditingController();
+  TextEditingController();
   final _stateController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  final SignupService _signupService = SignupService();
+  final UserService _signupService = UserService();
   bool _isLoading = false;
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
@@ -98,7 +98,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           icon: Icons.person),
                       const SizedBox(height: 16),
                       _buildTextField(_emailController, 'E-mail',
-                          icon: Icons.email, hintText: 'exemplo@dominio.com'),
+                          icon: Icons.email, hintText: 'exemplo@email.com'),
                       const SizedBox(height: 16),
                       _buildPasswordField(_passwordController, 'Senha',
                           obscureText: !_isPasswordVisible, isPassword: true),
@@ -143,13 +143,19 @@ class _SignupScreenState extends State<SignupScreen> {
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 300),
                             child: _isLoading
-                                ? const CircularProgressIndicator(
-                                    color: Colors.white)
+                                ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.0,
+                              ),
+                            )
                                 : const Text(
-                                    'Cadastrar',
-                                    style: TextStyle(
-                                        fontSize: 18, color: Colors.white),
-                                  ),
+                              'Cadastrar',
+                              style: TextStyle(
+                                  fontSize: 18, color: Colors.white),
+                            ),
                           ),
                         ),
                       ),
@@ -178,16 +184,16 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Widget _buildTextField(
-    TextEditingController controller,
-    String label, {
-    bool obscureText = false,
-    IconData? icon,
-    IconButton? suffixIcon,
-    String? hintText,
-    String? Function(String?)? validator,
-    TextInputType keyboardType = TextInputType.text,
-    int? maxLength,
-  }) {
+      TextEditingController controller,
+      String label, {
+        bool obscureText = false,
+        IconData? icon,
+        IconButton? suffixIcon,
+        String? hintText,
+        String? Function(String?)? validator,
+        TextInputType keyboardType = TextInputType.text,
+        int? maxLength,
+      }) {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
@@ -201,7 +207,7 @@ class _SignupScreenState extends State<SignupScreen> {
         filled: true,
         fillColor: Colors.grey.shade100.withOpacity(0.8),
         contentPadding:
-            const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+        const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8.0),
           borderSide: BorderSide.none,
@@ -214,19 +220,21 @@ class _SignupScreenState extends State<SignupScreen> {
         counterText: "",
       ),
       validator: (value) {
-        if (value == null || value.isEmpty) return 'Por favor, preencha este campo.';
+        if (value == null || value.isEmpty) {
+          return 'Por favor, preencha este campo.';
+        }
         return null;
       },
     );
   }
 
   Widget _buildPasswordField(
-    TextEditingController controller,
-    String label, {
-    bool obscureText = true,
-    bool isPassword = false,
-    bool isConfirmPassword = false,
-  }) {
+      TextEditingController controller,
+      String label, {
+        bool obscureText = true,
+        bool isPassword = false,
+        bool isConfirmPassword = false,
+      }) {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
@@ -248,7 +256,7 @@ class _SignupScreenState extends State<SignupScreen> {
         filled: true,
         fillColor: Colors.grey.shade100.withOpacity(0.8),
         contentPadding:
-            const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+        const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8.0),
           borderSide: BorderSide.none,
@@ -260,7 +268,9 @@ class _SignupScreenState extends State<SignupScreen> {
         labelStyle: const TextStyle(color: Colors.grey),
       ),
       validator: (value) {
-        if (value == null || value.isEmpty) return 'Por favor, preencha este campo.';
+        if (value == null || value.isEmpty) {
+          return 'Por favor, preencha este campo.';
+        }
         if (isConfirmPassword && value != _passwordController.text) {
           return 'As senhas não coincidem';
         }
@@ -274,13 +284,13 @@ class _SignupScreenState extends State<SignupScreen> {
       controller: _stateController,
       readOnly: true,
       decoration: InputDecoration(
-        labelText: 'Estado (UF)',
+        labelText: 'Estado emissão CRM (UF)',
         hintText: 'Selecione o Estado',
         prefixIcon: const Icon(Icons.location_on, color: Colors.grey),
         filled: true,
         fillColor: Colors.grey.shade100.withOpacity(0.8),
         contentPadding:
-            const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+        const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8.0),
           borderSide: BorderSide.none,

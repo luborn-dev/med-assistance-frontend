@@ -71,6 +71,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/logo.png
+    - assets/logo_no_text.png
     - .env.firewall.bypass
     - .env.dev
 

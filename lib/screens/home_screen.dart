@@ -1,10 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:med_assistance_frontend/components/background_container.dart';
 
-class MainScreen extends StatelessWidget {
+class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
-  void _logout(context) async {
+  @override
+  _MainScreenState createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  String userName = 'Usuário';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userName = (prefs.getString('name')?.split(" ").first) ?? 'Usuário';
+    });
+  }
+
+  void _logout(BuildContext context) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     Navigator.pushReplacementNamed(context, '/login');
@@ -13,109 +34,131 @@ class MainScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Usando uma cor de fundo sólida
-      body: Container(
-        color: Colors.white, // Fundo branco para um visual clean
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        width: double.infinity,
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              padding: const EdgeInsets.only(top: 64.0, bottom: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Procedimentos",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: [
-                      _buildCategoryCard('Cadastrar Paciente', Icons.person_add, context, "/patientregistration"),
-                      _buildCategoryCard('Iniciar nova gravação', Icons.mic, context, "/preRecording"),
-                      _buildCategoryCard('Gerenciar gravações', Icons.manage_search, context, "/manageRecordings"),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  Text(
-                    "Geral",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: [
-                      _buildCategoryCard('Minha conta', Icons.account_circle, context, "/manageAccount"),
-                      _buildCategoryCard('FAQ', Icons.help_outline, context, "/faq"),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: 16,
-              right: 16,
-              child: IconButton(
-                icon: Icon(Icons.logout, color: Theme.of(context).primaryColor),
-                onPressed: () {
-                  _showLogoutConfirmationDialog(context);
-                },
-              ),
-            ),
-          ],
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          "Bem-vindo, $userName!",
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+          textAlign: TextAlign.center,
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.black),
+            onPressed: () => _showLogoutConfirmationDialog(context),
+          ),
+        ],
+      ),
+      body: BackgroundContainer(
+        child: SafeArea(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              const Image(
+                image: AssetImage('assets/logo_no_text.png'),
+                width: 150,
+                height: 150,
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  children: [
+                    _buildActionCard(
+                      title: "Cadastrar Paciente",
+                      icon: Icons.person_add,
+                      color: Colors.blue[400]!,
+                      onTap: () =>
+                          Navigator.pushNamed(context, "/patientregistration"),
+                    ),
+                    _buildActionCard(
+                      title: "Iniciar Gravação",
+                      icon: Icons.mic,
+                      color: Colors.blue[400]!,
+                      onTap: () =>
+                          Navigator.pushNamed(context, "/preRecording"),
+                    ),
+                    _buildActionCard(
+                      title: "Gerenciar Gravações",
+                      icon: Icons.manage_search,
+                      color: Colors.blue[400]!,
+                      onTap: () =>
+                          Navigator.pushNamed(context, "/manageRecordings"),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: "Home",
+          ),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.account_circle), label: "Perfil"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.help_outline),
+            label: "FAQ",
+          ),
+        ],
+        onTap: (index) {
+          if (index == 0) {
+            // Já está na tela Home, não faz nada.
+          } else if (index == 1) {
+            Navigator.pushNamed(context, "/manageAccount");
+          } else if (index == 2) {
+            Navigator.pushNamed(context, "/faq");
+          }
+        },
       ),
     );
   }
 
-  Widget _buildCategoryCard(String title, IconData icon, BuildContext context, String route) {
+  Widget _buildActionCard({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
-      onTap: () {
-        Navigator.pushReplacementNamed(context, route);
-      },
+      onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(4.0), // Cantos menos arredondados
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2), // Sombra mais sutil
-              blurRadius: 4,
-              offset: const Offset(2, 2),
-            ),
-          ],
-          border: Border.all(color: Colors.grey.withOpacity(0.2)), // Borda sutil
+          color: color.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: Theme.of(context).primaryColor),
+            Icon(
+              icon,
+              size: 60,
+              color: color,
+            ),
             const SizedBox(height: 8),
             Text(
               title,
-              textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 14, // Fonte um pouco menor para melhor proporção
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
+                color: Colors.black87,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -136,17 +179,15 @@ class MainScreen extends StatelessWidget {
           actions: <Widget>[
             TextButton(
               style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.grey,
                 textStyle: const TextStyle(fontWeight: FontWeight.bold),
               ),
               child: const Text('Não'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(context).pop(),
             ),
             TextButton(
               style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.red,
                 textStyle: const TextStyle(fontWeight: FontWeight.bold),
               ),
               child: const Text('Sim'),
