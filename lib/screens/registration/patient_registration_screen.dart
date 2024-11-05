@@ -195,16 +195,6 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
                 ),
               ),
             ),
-            Positioned(
-              top: 32,
-              left: 16,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () {
-                  Navigator.pushNamed(context, "/main");
-                },
-              ),
-            ),
           ],
         ),
       ),
