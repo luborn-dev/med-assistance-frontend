@@ -106,17 +106,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             child: _isLoading
                                 ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.0,
-                              ),
-                            )
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.0,
+                                    ),
+                                  )
                                 : const Text(
-                              'Login',
-                              style: TextStyle(fontSize: 18),
-                            ),
+                                    'Login',
+                                    style: TextStyle(fontSize: 18),
+                                  ),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -165,11 +165,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildTextField(
-      TextEditingController controller,
-      String label, {
-        bool obscureText = false,
-        IconData? icon,
-      }) {
+    TextEditingController controller,
+    String label, {
+    bool obscureText = false,
+    IconData? icon,
+  }) {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
@@ -179,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
         filled: true,
         fillColor: Colors.grey.shade100.withOpacity(0.8),
         contentPadding:
-        const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+            const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8.0),
           borderSide: BorderSide.none,

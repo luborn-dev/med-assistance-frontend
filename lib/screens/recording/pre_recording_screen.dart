@@ -3,9 +3,8 @@ import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:med_assistance_frontend/components/background_container.dart';
 import 'package:med_assistance_frontend/screens/recording/recording_screen.dart';
 import 'package:med_assistance_frontend/utils/procedure_options.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:med_assistance_frontend/services/patient_service.dart';
 
 class PreRecordingScreen extends StatefulWidget {
   const PreRecordingScreen({Key? key}) : super(key: key);
@@ -17,14 +16,19 @@ class PreRecordingScreen extends StatefulWidget {
 class _PreRecordingScreenState extends State<PreRecordingScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _patientController = TextEditingController();
-  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _procedureController = TextEditingController();
   String? _selectedProcedureType;
   String? _selectedExactProcedureName;
   List<String> _filteredProcedureOptions = [];
   List<Map<String, dynamic>> _patients = [];
 
+  String? _selectedPatientId;
+  String? _doctorId;
+
   bool _isPatientListEmpty = false;
   bool _isLoading = true;
+
+  final PatientService _patientService = PatientService();
 
   final Map<String, List<String>> _procedureOptions = {
     'Cirurgias': List.from(cirurgias)..sort(),
@@ -34,41 +38,48 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_filterProcedureOptions);
-    _loadPatients();
+    _procedureController.addListener(_filterProcedureOptions);
+    _loadInitialData();
   }
 
   @override
   void dispose() {
+    _procedureController.removeListener(_filterProcedureOptions);
     _patientController.dispose();
-    _searchController.dispose();
+    _procedureController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadPatients() async {
+  Future<void> _loadInitialData() async {
+    await _loadDoctorId();
+    await _loadPatients();
+  }
+
+  Future<void> _loadDoctorId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? doctorId = prefs.getString('doctorId');
-    print(doctorId);
+    setState(() {
+      _doctorId = prefs.getString('userId');
+    });
+  }
 
-    if (doctorId != null) {
-      var url =
-          Uri.parse('http://172.20.10.3:8000/api/patients?doctor_id=$doctorId');
-      var response =
-          await http.get(url, headers: {"Content-Type": "application/json"});
-
-      if (response.statusCode == 200) {
+  Future<void> _loadPatients() async {
+    if (_doctorId != null) {
+      try {
+        List<Map<String, dynamic>> patients =
+            await _patientService.getPatients();
         setState(() {
-          _patients =
-              List<Map<String, dynamic>>.from(jsonDecode(response.body));
-          _isPatientListEmpty =
-              _patients.isEmpty; // Verifica se a lista está vazia
+          _patients = patients;
+          _isPatientListEmpty = _patients.isEmpty;
         });
-      } else {
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Erro ao carregar pacientes: ${response.body}')),
+          SnackBar(content: Text('Erro ao carregar pacientes: $e')),
         );
       }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro ao carregar o ID do médico')),
+      );
     }
 
     setState(() {
@@ -86,16 +97,103 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
   }
 
   Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate() &&
-        _filteredProcedureOptions.contains(_selectedExactProcedureName)) {
+    if (_formKey.currentState!.validate()) {
+      bool isValidPatient = _patients.any((patient) =>
+          patient['name'].toLowerCase() ==
+          _patientController.text.toLowerCase());
+      if (!isValidPatient) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor, selecione um paciente válido.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      if (!_filteredProcedureOptions.any((option) =>
+          option.toLowerCase() == _selectedExactProcedureName?.toLowerCase())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor, selecione um procedimento válido.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      bool confirmed = await _showConfirmationDialog();
+      if (!confirmed) return;
+
       var procedureData = {
-        'procedure_type': _selectedProcedureType,
-        'patient_name': _patientController.text,
-        'exact_procedure_name': _selectedExactProcedureName,
+        'paciente_id': _selectedPatientId,
+        'medico_id': _doctorId,
+        'tipo': _selectedProcedureType,
+        'procedimento': _selectedExactProcedureName,
       };
 
       _navigateToRecordingScreen(procedureData);
     }
+  }
+
+  Future<bool> _showConfirmationDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Confirmação de Dados'),
+              content: SingleChildScrollView(
+                child: ListBody(
+                  children: <Widget>[
+                    _buildConfirmationText(
+                        'Tipo de Procedimento', _selectedProcedureType ?? ''),
+                    _buildConfirmationText('Paciente', _patientController.text),
+                    _buildConfirmationText(
+                        'Procedimento', _selectedExactProcedureName ?? ''),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('Cancelar'),
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                ),
+                ElevatedButton(
+                  child: const Text('Confirmar'),
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+  }
+
+  Widget _buildConfirmationText(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: RichText(
+        text: TextSpan(
+          text: '$label: ',
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+          children: [
+            TextSpan(
+              text: value,
+              style: const TextStyle(
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _filterProcedureOptions() {
@@ -104,7 +202,7 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
         _filteredProcedureOptions = _procedureOptions[_selectedProcedureType]!
             .where((option) => option
                 .toLowerCase()
-                .contains(_searchController.text.toLowerCase()))
+                .contains(_procedureController.text.toLowerCase()))
             .toList();
       });
     }
@@ -117,108 +215,119 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text("Novo Procedimento"),
+        centerTitle: true,
+      ),
       body: BackgroundContainer(
-        child: Stack(
-          children: [
-            Center(
-              child: _isLoading
-                  ? const CircularProgressIndicator() // Exibe indicador de carregamento enquanto os dados estão sendo buscados
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(20.0),
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          if (_isPatientListEmpty) ...[
-                            Container(
-                              padding: const EdgeInsets.all(16.0),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Column(
-                                children: [
-                                  const Text(
-                                    'Nenhum paciente encontrado. Cadastre um paciente antes de continuar.',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  ElevatedButton(
-                                    onPressed: _navigateToPatientRegistration,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(16.0),
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'Cadastrar Paciente',
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                          ],
-                          if (!_isPatientListEmpty) ...[
-                            Form(
-                              key: _formKey,
-                              child: Column(
-                                children: [
-                                  _buildProcedureTypeDropdown(),
-                                  const SizedBox(height: 20),
-                                  _buildPatientField(),
-                                  const SizedBox(height: 20),
-                                  _buildProcedureNameField(),
-                                  const SizedBox(height: 30),
-                                  SizedBox(
-                                    width: 150,
-                                    child: ElevatedButton(
-                                      onPressed: () {
-                                        if (_filteredProcedureOptions.contains(
-                                            _selectedExactProcedureName)) {
-                                          _submitForm();
-                                        } else {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                  'Por favor, preencha corretamente o nome do procedimento.'),
-                                              backgroundColor: Colors.red,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _isPatientListEmpty
+                              ? _buildNoPatientsMessage()
+                              : Form(
+                                  key: _formKey,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _buildProcedureTypeDropdown(),
+                                      const SizedBox(height: 16),
+                                      _buildPatientField(),
+                                      const SizedBox(height: 16),
+                                      _buildProcedureNameField(),
+                                      const SizedBox(height: 24),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton(
+                                          onPressed: _submitForm,
+                                          style: ElevatedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 16.0),
+                                            backgroundColor: Colors.blue,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12.0),
                                             ),
-                                          );
-                                        }
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 16.0, horizontal: 32.0),
-                                        backgroundColor: Colors.blue,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16.0),
+                                          ),
+                                          child: const Text(
+                                            'Continuar',
+                                            style: TextStyle(fontSize: 18.0),
+                                          ),
                                         ),
                                       ),
-                                      child: const Text(
-                                        'Continuar',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16.0,
-                                        ),
-                                      ),
-                                    ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
-                          ],
+                                ),
                         ],
                       ),
                     ),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  /// Constrói a mensagem quando nenhum paciente é encontrado.
+  Widget _buildNoPatientsMessage() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.person_off,
+              size: 80,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Nenhum paciente encontrado.',
+              style: TextStyle(
+                color: Colors.black87,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Cadastre um paciente antes de continuar.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.black54,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: 200,
+              child: ElevatedButton(
+                onPressed: _navigateToPatientRegistration,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  backgroundColor: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                ),
+                child: const Text(
+                  'Cadastrar Paciente',
+                  style: TextStyle(color: Colors.white, fontSize: 18.0),
+                ),
+              ),
             ),
           ],
         ),
@@ -227,186 +336,223 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
   }
 
   Widget _buildProcedureTypeDropdown() {
-    return SizedBox(
-      width: MediaQuery.of(context).size.width * 0.8,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Tipo de Procedimento",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 5),
-          DropdownButtonFormField<String>(
-            value: _selectedProcedureType,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-            dropdownColor: Colors.white,
-            items: _procedureOptions.keys
-                .map((label) => DropdownMenuItem(
-                      value: label,
-                      child: Text(label),
-                    ))
-                .toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedProcedureType = value;
-                _selectedExactProcedureName = null;
-                _filteredProcedureOptions = _procedureOptions[value] ?? [];
-                _filterProcedureOptions();
-              });
-            },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Por favor, selecione o tipo de procedimento';
-              }
-              return null;
-            },
-          ),
-        ],
-      ),
+    return _buildLabeledDropdownField<String>(
+      label: 'Tipo de Procedimento',
+      value: _selectedProcedureType,
+      items: _procedureOptions.keys.toList(),
+      icon: Icons.category,
+      onChanged: (value) {
+        setState(() {
+          _selectedProcedureType = value;
+          _selectedExactProcedureName = null;
+          _filteredProcedureOptions = _procedureOptions[value] ?? [];
+          _procedureController.clear();
+          _filterProcedureOptions();
+        });
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Por favor, selecione o tipo de procedimento';
+        }
+        return null;
+      },
     );
   }
 
   Widget _buildPatientField() {
-    return SizedBox(
-      width: MediaQuery.of(context).size.width * 0.8,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Paciente",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 5),
-          TypeAheadFormField<Map<String, dynamic>>(
-            textFieldConfiguration: TextFieldConfiguration(
-              controller: _patientController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                hintText: 'Digite para buscar...',
-              ),
-            ),
-            suggestionsCallback: (pattern) {
-              return _patients.where((patient) => patient['name']
-                  .toLowerCase()
-                  .contains(pattern.toLowerCase()));
-            },
-            itemBuilder: (context, Map<String, dynamic> suggestion) {
-              return ListTile(
-                title: Text(suggestion['name']),
-                subtitle: Text(suggestion['cpf']),
-              );
-            },
-            onSuggestionSelected: (suggestion) {
-              setState(() {
-                _patientController.text = suggestion['name'];
-              });
-            },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Por favor, selecione um paciente';
-              }
-              return null;
-            },
-          ),
-        ],
-      ),
+    return _buildLabeledTypeAheadField<Map<String, dynamic>>(
+      controller: _patientController,
+      label: 'Paciente',
+      hintText: 'Digite para buscar...',
+      icon: Icons.person,
+      suggestionsCallback: (pattern) {
+        return _patients.where((patient) =>
+            patient['name'].toLowerCase().contains(pattern.toLowerCase()));
+      },
+      itemBuilder: (context, Map<String, dynamic> suggestion) {
+        return ListTile(
+          title: Text(suggestion['name']),
+          subtitle: Text('CPF: ${suggestion['cpf']}'),
+        );
+      },
+      onSuggestionSelected: (suggestion) {
+        setState(() {
+          _patientController.text = suggestion['name'];
+          _selectedPatientId = suggestion['id'];
+        });
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Por favor, selecione um paciente';
+        }
+        if (!_patients.any((patient) =>
+            patient['name'].toLowerCase() == value.toLowerCase())) {
+          return 'Paciente não encontrado. Selecione um paciente válido.';
+        }
+        return null;
+      },
     );
   }
 
   Widget _buildProcedureNameField() {
-    return SizedBox(
-      width: MediaQuery.of(context).size.width * 0.8,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Procedimento",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+    return GestureDetector(
+      onTap: () {
+        if (_selectedProcedureType == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Selecione o tipo de procedimento primeiro.'),
             ),
-          ),
-          const SizedBox(height: 5),
-          TypeAheadFormField<String>(
-            textFieldConfiguration: TextFieldConfiguration(
-              controller: _searchController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                hintText: 'Digite para buscar...',
-              ),
-            ),
-            errorBuilder: (context, error) {
-              return Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  'Ocorreu um erro: $error',
-                  style: TextStyle(color: Colors.red),
-                ),
-              );
-            },
-            loadingBuilder: (context) {
-              return const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: CircularProgressIndicator(),
-              );
-            },
-            noItemsFoundBuilder: (context) {
-              return const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text(
-                  'Nenhum procedimento encontrado',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              );
-            },
-            suggestionsCallback: (pattern) {
-              return _filteredProcedureOptions.where((option) =>
-                  option.toLowerCase().contains(pattern.toLowerCase()));
-            },
-            itemBuilder: (context, suggestion) {
-              return ListTile(
-                title: Text(suggestion),
-              );
-            },
-            onSuggestionSelected: (suggestion) {
-              setState(() {
-                _searchController.text = suggestion;
-                _selectedExactProcedureName = suggestion;
-              });
-            },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Por favor, selecione o nome exato do procedimento';
-              }
-              return null;
-            },
-          ),
-        ],
+          );
+        }
+      },
+      child: AbsorbPointer(
+        absorbing: _selectedProcedureType == null,
+        // Impede a interação se o tipo não estiver selecionado
+        child: _buildLabeledTypeAheadField<String>(
+          controller: _procedureController,
+          label: 'Procedimento',
+          hintText: 'Digite para buscar...',
+          icon: Icons.medical_services,
+          enabled: _selectedProcedureType != null,
+          // Desabilita o campo se não houver tipo selecionado
+          suggestionsCallback: (pattern) {
+            return _filteredProcedureOptions.where((option) =>
+                option.toLowerCase().contains(pattern.toLowerCase()));
+          },
+          itemBuilder: (context, suggestion) {
+            return ListTile(
+              title: Text(suggestion),
+            );
+          },
+          onSuggestionSelected: (suggestion) {
+            setState(() {
+              _procedureController.text = suggestion;
+              _selectedExactProcedureName = suggestion;
+            });
+          },
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Por favor, selecione o nome exato do procedimento';
+            }
+            if (!_filteredProcedureOptions
+                .any((option) => option.toLowerCase() == value.toLowerCase())) {
+              return 'Procedimento não encontrado. Selecione um procedimento válido.';
+            }
+            return null;
+          },
+        ),
       ),
+    );
+  }
+
+  Widget _buildLabeledDropdownField<T>({
+    required String label,
+    required T? value,
+    required List<T> items,
+    required IconData icon,
+    required ValueChanged<T?> onChanged,
+    FormFieldValidator<T>? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Label
+        Text(
+          '$label *',
+          style: const TextStyle(
+            color: Colors.blue,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 5),
+        // Dropdown
+        DropdownButtonFormField<T>(
+          value: value,
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, color: Colors.grey),
+            filled: true,
+            fillColor: Colors.grey.shade100.withOpacity(0.8),
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: const BorderSide(color: Colors.blue, width: 1.5),
+            ),
+          ),
+          dropdownColor: Colors.white,
+          items: items
+              .map((item) => DropdownMenuItem<T>(
+                    value: item,
+                    child: Text(item.toString()),
+                  ))
+              .toList(),
+          onChanged: onChanged,
+          validator: validator,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLabeledTypeAheadField<T>({
+    required TextEditingController controller,
+    required String label,
+    required String hintText,
+    required IconData icon,
+    required SuggestionsCallback<T> suggestionsCallback,
+    required ItemBuilder<T> itemBuilder,
+    required SuggestionSelectionCallback<T> onSuggestionSelected,
+    FormFieldValidator<String>? validator,
+    bool enabled =
+        true, // Adicionado parâmetro para controlar se o campo está habilitado
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Label
+        Text(
+          '$label *',
+          style: const TextStyle(
+            color: Colors.blue,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 5),
+        // TypeAheadField
+        TypeAheadFormField<T>(
+          textFieldConfiguration: TextFieldConfiguration(
+            controller: controller,
+            enabled: enabled,
+            decoration: InputDecoration(
+              hintText: hintText,
+              prefixIcon: Icon(icon, color: Colors.grey),
+              filled: true,
+              fillColor: Colors.grey.shade100.withOpacity(0.8),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: const BorderSide(color: Colors.blue, width: 1.5),
+              ),
+              labelStyle: const TextStyle(color: Colors.grey),
+            ),
+          ),
+          suggestionsCallback: suggestionsCallback,
+          itemBuilder: itemBuilder,
+          onSuggestionSelected: onSuggestionSelected,
+          validator: validator,
+          noItemsFoundBuilder: (context) => const SizedBox(),
+        ),
+      ],
     );
   }
 }

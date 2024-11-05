@@ -1,14 +1,13 @@
-import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:med_assistance_frontend/components/background_container.dart';
-import 'package:record/record.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:http/http.dart' as http;
 import 'dart:io';
-import 'package:http_parser/http_parser.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:med_assistance_frontend/services/procedures_service.dart';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+import 'package:med_assistance_frontend/components/background_container.dart';
 
 class RecordingScreen extends StatefulWidget {
   final Map<String, dynamic> procedureData;
@@ -23,34 +22,23 @@ class RecordingScreen extends StatefulWidget {
 class _RecordingScreenState extends State<RecordingScreen> {
   final AudioRecorder _record = AudioRecorder();
   bool _isRecording = false;
-  bool _isProcessing = false; // Indicador de processamento (carregando)
+  bool _isProcessing = false;
   String? _recordingPath;
-  String? _doctorId;
-  String? _patientId;
-  Duration _duration = Duration();
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _prepareRecordingPath().then((_) {
-      _requestPermission();
-    });
-    _loadDoctorId();
-    _loadPatientId();
+    _initializeRecording();
   }
 
-  Future<void> _prepareRecordingPath() async {
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      _recordingPath = '${directory.path}/myRecording.m4a';
-    } catch (e) {
-      _showError('Erro ao preparar o caminho de gravação: $e');
-    }
+  Future<void> _initializeRecording() async {
+    await _requestPermission();
+    await _prepareRecordingPath();
   }
 
   Future<void> _requestPermission() async {
-    var status = await Permission.microphone.request();
+    PermissionStatus status = await Permission.microphone.request();
     if (status != PermissionStatus.granted) {
       _showPermissionDialog();
     }
@@ -60,73 +48,48 @@ class _RecordingScreenState extends State<RecordingScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Permissão necessária"),
+        title: const Text("Permissão Necessária"),
         content: const Text(
-            "Este app requer acesso ao microfone para gravar áudio."),
+            "Este aplicativo precisa de acesso ao microfone para gravar áudio."),
         actions: <Widget>[
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text("OK"),
+            onPressed: () {
+              Navigator.of(context).pop();
+              openAppSettings();
+            },
+            child: const Text("Abrir Configurações"),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _loadDoctorId() async {
+  Future<void> _prepareRecordingPath() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      setState(() {
-        _doctorId = prefs.getString('doctorId') ?? '';
-      });
+      final directory = await getApplicationDocumentsDirectory();
+      final String fileName =
+          'recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      _recordingPath = '${directory.path}/$fileName';
     } catch (e) {
-      _showError('Erro ao carregar o ID do médico: $e');
+      _showError('Erro ao preparar o caminho de gravação: $e');
     }
-  }
-
-  Future<void> _loadPatientId() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      setState(() {
-        _patientId = prefs.getString('patientId') ?? '';
-      });
-    } catch (e) {
-      _showError('Erro ao carregar o ID do paciente: $e');
-    }
-  }
-
-  void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) {
-      setState(() {
-        _duration = Duration(seconds: _duration.inSeconds + 1);
-      });
-    });
-  }
-
-  void _stopTimer() {
-    _timer?.cancel();
-    setState(() {
-      _duration = Duration();
-    });
   }
 
   Future<void> _toggleRecording() async {
     try {
-      final isCurrentlyRecording = await _record.isRecording();
-      if (!isCurrentlyRecording) {
+      if (!_isRecording) {
         if (await _record.hasPermission()) {
           if (_recordingPath == null) {
             await _prepareRecordingPath();
           }
           await _record.start(
-            const RecordConfig(),
+            const RecordConfig(encoder: AudioEncoder.aacLc),
             path: _recordingPath!,
           );
 
           setState(() {
             _isRecording = true;
           });
-          _startTimer();
         } else {
           _showError('Permissão para gravação negada.');
         }
@@ -137,7 +100,6 @@ class _RecordingScreenState extends State<RecordingScreen> {
           _isRecording = false;
           _isProcessing = true;
         });
-        _stopTimer();
 
         if (_recordingPath != null &&
             await File(_recordingPath!).length() > 0) {
@@ -163,7 +125,8 @@ class _RecordingScreenState extends State<RecordingScreen> {
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text("Enviar Gravação"),
-        content: const Text("Deseja enviar a gravação?"),
+        content: const Text(
+            "Deseja enviar a gravação? Você não poderá gravar novamente."),
         actions: <Widget>[
           TextButton(
             onPressed: () {
@@ -188,92 +151,25 @@ class _RecordingScreenState extends State<RecordingScreen> {
   }
 
   Future<void> _sendRecording() async {
-    if (_recordingPath == null) {
-      _showError('Nenhuma gravação disponível para enviar.');
-      setState(() {
-        _isProcessing = false;
-      });
-      return;
-    }
+    setState(() {
+      _isProcessing = true;
+    });
 
     try {
-      var url = Uri.parse('http://172.20.10.3:8000/api/procedures/upload');
-      var request = http.MultipartRequest('POST', url)
-        ..fields['procedure_type'] = widget.procedureData['procedure_type']
-        ..fields['patient_name'] = widget.procedureData['patient_name']
-        ..fields['exact_procedure_name'] =
-            widget.procedureData['exact_procedure_name']
-        ..fields['doctor_id'] = _doctorId ?? ''
-        ..files.add(await http.MultipartFile.fromPath(
-          'file',
-          _recordingPath!,
-          contentType: MediaType('audio', 'mp4'),
-        ));
-
-      var response = await request.send();
-
-      if (response.statusCode == 200) {
-        _showSuccessPopup();
-      } else {
-        final responseBody = await response.stream.bytesToString();
-        final decodedResponse = jsonDecode(responseBody);
-
-        String errorMessage = 'Erro ao enviar a gravação.';
-
-        if (decodedResponse != null && decodedResponse['detail'] != null) {
-          errorMessage = decodedResponse['detail'];
-        } else {
-          switch (response.statusCode) {
-            case 400:
-              errorMessage =
-                  'Requisição inválida. Verifique os dados e tente novamente.';
-              break;
-            case 422:
-              errorMessage =
-                  'Dados inválidos. Por favor, corrija e tente novamente.';
-              break;
-            case 500:
-              errorMessage =
-                  'Erro no servidor. Por favor, tente novamente mais tarde.';
-              break;
-            case 503:
-              errorMessage =
-                  'Serviço indisponível. Tente novamente mais tarde.';
-              break;
-            default:
-              errorMessage = 'Erro inesperado. Código: ${response.statusCode}';
-          }
-        }
-
-        _showError(errorMessage);
-      }
+      final procedureService = ProcedureService();
+      final recordingFile = File(_recordingPath!);
+      await procedureService.sendRecording(
+        procedureData: widget.procedureData,
+        recordingFile: recordingFile,
+        context: context,
+      );
     } catch (e) {
       _showError('Erro ao enviar a gravação: $e');
     } finally {
       setState(() {
         _isProcessing = false;
-        _recordingPath = null;
       });
     }
-  }
-
-  void _showSuccessPopup() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Sucesso"),
-        content: const Text("Gravação enviada com sucesso."),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.pushReplacementNamed(context, '/main');
-            },
-            child: const Text("OK"),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showError(String message) {
@@ -284,15 +180,17 @@ class _RecordingScreenState extends State<RecordingScreen> {
 
   void _cancelRecording() async {
     try {
-      final isCurrentlyRecording = await _record.isRecording();
-      if (isCurrentlyRecording) {
-        await _record.cancel();
+      bool isRecording = await _record.isRecording();
+      if (isRecording) {
+        await _record.stop();
+        if (_recordingPath != null) {
+          await File(_recordingPath!).delete();
+        }
 
         setState(() {
           _isRecording = false;
           _recordingPath = null;
         });
-        _stopTimer();
       }
     } catch (e) {
       _showError('Erro ao cancelar a gravação: $e');
@@ -300,6 +198,9 @@ class _RecordingScreenState extends State<RecordingScreen> {
   }
 
   void _resetRecording() {
+    if (_recordingPath != null) {
+      File(_recordingPath!).deleteSync();
+    }
     setState(() {
       _recordingPath = null;
     });
@@ -308,81 +209,80 @@ class _RecordingScreenState extends State<RecordingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text("Novo Procedimento"),
+        centerTitle: true,
+      ),
       body: BackgroundContainer(
         child: SafeArea(
           child: Center(
             child: _isProcessing
-                ? Column(
+                ? const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Processando...',
+                      CircularProgressIndicator(),
+                      SizedBox(height: 20),
+                      Text(
+                        'Enviando gravação...',
                         style: TextStyle(fontSize: 18),
                         textAlign: TextAlign.center,
                       ),
                     ],
                   )
                 : Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(24.0),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         if (_isRecording) ...[
-                          const Icon(
-                            Icons.mic,
-                            color: Colors.red,
-                            size: 50,
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                        if (_isRecording) ...[
-                          Text(
-                            _duration
-                                .toString()
-                                .split('.')
-                                .first
-                                .padLeft(8, "0"),
-                            style: const TextStyle(
-                                fontSize: 30, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                        GestureDetector(
-                          onTap: _toggleRecording,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            width: _isRecording ? 80 : 100,
-                            height: _isRecording ? 80 : 100,
-                            decoration: BoxDecoration(
-                              color: _isRecording ? Colors.red : Colors.blue,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              _isRecording ? Icons.stop : Icons.mic,
-                              color: Colors.white,
-                              size: 40,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        if (_isRecording) ...[
-                          ElevatedButton(
-                            onPressed: _cancelRecording,
+                          // Exibir botão de parar gravação
+                          ElevatedButton.icon(
+                            onPressed: _toggleRecording,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.red,
                               padding: const EdgeInsets.symmetric(
                                   vertical: 12.0, horizontal: 24.0),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
                             ),
-                            child: const Text('Cancelar Gravação'),
+                            icon: const Icon(Icons.stop),
+                            label: const Text('Parar Gravação'),
+                          ),
+                          const SizedBox(height: 20),
+                          // Botão para cancelar a gravação
+                          ElevatedButton.icon(
+                            onPressed: _cancelRecording,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12.0, horizontal: 24.0),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
+                            ),
+                            icon: const Icon(Icons.cancel),
+                            label: const Text('Cancelar Gravação'),
                           ),
                         ],
-                        if (!_isRecording && _recordingPath == null) ...[
-                          const Text(
-                            'Toque no botão para iniciar a gravação',
-                            style: TextStyle(fontSize: 18),
-                            textAlign: TextAlign.center,
+                        if (!_isRecording) ...[
+                          // Exibir botão para iniciar a gravação
+                          ElevatedButton.icon(
+                            onPressed: _toggleRecording,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12.0, horizontal: 24.0),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
+                            ),
+                            icon: const Icon(Icons.mic),
+                            label: const Text('Iniciar Gravação'),
                           ),
                         ],
                       ],

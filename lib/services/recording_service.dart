@@ -15,11 +15,8 @@ class RecordingService {
     if (response.statusCode == 200) {
       List<dynamic> recordings = json.decode(utf8.decode(response.bodyBytes));
 
-      // Agora buscamos os detalhes dos pacientes e médicos usando o ID
       for (var recording in recordings) {
-        // Busca detalhes do paciente pelo ID do paciente
-        final patientId = recording[
-            'patient_id']; // Certifique-se que o 'patient_id' é parte do objeto recording
+        final patientId = recording['patient_id'];
         final patientResponse = await http.get(
           Uri.parse('$patientsBaseUrl/$patientId'),
           headers: {'Content-Type': 'application/json; charset=UTF-8'},
@@ -33,7 +30,6 @@ class RecordingService {
           recording['patient_phone'] = patientData['phone'];
         }
 
-        // Busca detalhes do médico pelo ID
         final doctorResponse = await http.get(
           Uri.parse('$doctorsBaseUrl/${recording['doctorId']}'),
           headers: {'Content-Type': 'application/json; charset=UTF-8'},

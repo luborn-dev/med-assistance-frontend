@@ -38,6 +38,6 @@ class LoginService {
     await prefs.setString('email', userData['email']);
     await prefs.setString('name', userData['name']);
     await prefs.setString('professionalId', userData['professional_id']);
-    await prefs.setString('userId', userData['id']);
+    await prefs.setString('doctorId', userData['id']);
   }
 }
