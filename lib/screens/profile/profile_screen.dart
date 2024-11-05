@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:med_assistance_frontend/components/bottom_navigation.dart';
 import 'package:med_assistance_frontend/services/access/user_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:med_assistance_frontend/components/background_container.dart';
@@ -203,25 +204,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: "Home",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_circle),
-            label: "Perfil",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.help_outline),
-            label: "FAQ",
-          ),
-        ],
+      bottomNavigationBar: BottomNavigation(
         currentIndex: 1,
         onTap: (index) {
           if (index == 0) Navigator.pushReplacementNamed(context, '/main');
-          if (index == 2) Navigator.pushReplacementNamed(context, '/faq');
+          if (index == 2) {
+            Navigator.pushReplacementNamed(context, '/faq');
+          }
         },
       ),
     );
