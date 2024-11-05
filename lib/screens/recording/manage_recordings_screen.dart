@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:med_assistance_frontend/components/background_container.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/recording_service.dart';
-import '../widget/gradient_container.dart';
-import '../utils/pdf_exporter.dart';
-import '../widget/recording_card.dart';
-import '../widget/search_field.dart';
+import '../../services/recording_service.dart';
+import '../../utils/pdf_exporter.dart';
+import '../../components/recording_card.dart';
+import '../../components/search_field.dart';
 
 class ManageRecordingsScreen extends StatefulWidget {
   @override
@@ -81,7 +81,7 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GradientContainer(
+      body: BackgroundContainer(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: isLoading

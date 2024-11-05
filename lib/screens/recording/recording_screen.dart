@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:med_assistance_frontend/widget/gradient_container.dart';
+import 'package:med_assistance_frontend/components/background_container.dart';
 import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
@@ -61,8 +61,8 @@ class _RecordingScreenState extends State<RecordingScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Permissão necessária"),
-        content:
-        const Text("Este app requer acesso ao microfone para gravar áudio."),
+        content: const Text(
+            "Este app requer acesso ao microfone para gravar áudio."),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -139,7 +139,8 @@ class _RecordingScreenState extends State<RecordingScreen> {
         });
         _stopTimer();
 
-        if (_recordingPath != null && await File(_recordingPath!).length() > 0) {
+        if (_recordingPath != null &&
+            await File(_recordingPath!).length() > 0) {
           _showSendConfirmationDialog();
         } else {
           _showError("Arquivo de gravação está vazio ou não existe.");
@@ -201,7 +202,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
         ..fields['procedure_type'] = widget.procedureData['procedure_type']
         ..fields['patient_name'] = widget.procedureData['patient_name']
         ..fields['exact_procedure_name'] =
-        widget.procedureData['exact_procedure_name']
+            widget.procedureData['exact_procedure_name']
         ..fields['doctor_id'] = _doctorId ?? ''
         ..files.add(await http.MultipartFile.fromPath(
           'file',
@@ -225,23 +226,22 @@ class _RecordingScreenState extends State<RecordingScreen> {
           switch (response.statusCode) {
             case 400:
               errorMessage =
-              'Requisição inválida. Verifique os dados e tente novamente.';
+                  'Requisição inválida. Verifique os dados e tente novamente.';
               break;
             case 422:
               errorMessage =
-              'Dados inválidos. Por favor, corrija e tente novamente.';
+                  'Dados inválidos. Por favor, corrija e tente novamente.';
               break;
             case 500:
               errorMessage =
-              'Erro no servidor. Por favor, tente novamente mais tarde.';
+                  'Erro no servidor. Por favor, tente novamente mais tarde.';
               break;
             case 503:
               errorMessage =
-              'Serviço indisponível. Tente novamente mais tarde.';
+                  'Serviço indisponível. Tente novamente mais tarde.';
               break;
             default:
-              errorMessage =
-              'Erro inesperado. Código: ${response.statusCode}';
+              errorMessage = 'Erro inesperado. Código: ${response.statusCode}';
           }
         }
 
@@ -293,7 +293,6 @@ class _RecordingScreenState extends State<RecordingScreen> {
           _recordingPath = null;
         });
         _stopTimer();
-
       }
     } catch (e) {
       _showError('Erro ao cancelar a gravação: $e');
@@ -309,89 +308,86 @@ class _RecordingScreenState extends State<RecordingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GradientContainer(
+      body: BackgroundContainer(
         child: SafeArea(
           child: Center(
             child: _isProcessing
                 ? Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 20),
-                const Text(
-                  'Processando...',
-                  style: TextStyle(fontSize: 18),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            )
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Processando...',
+                        style: TextStyle(fontSize: 18),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  )
                 : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (_isRecording) ...[
-                    const Icon(
-                      Icons.mic,
-                      color: Colors.red,
-                      size: 50,
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-                  if (_isRecording) ...[
-                    Text(
-                      _duration
-                          .toString()
-                          .split('.')
-                          .first
-                          .padLeft(8, "0"),
-                      style: const TextStyle(
-                          fontSize: 30, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-
-                  GestureDetector(
-                    onTap: _toggleRecording,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      width: _isRecording ? 80 : 100,
-                      height: _isRecording ? 80 : 100,
-                      decoration: BoxDecoration(
-                        color: _isRecording ? Colors.red : Colors.blue,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _isRecording ? Icons.stop : Icons.mic,
-                        color: Colors.white,
-                        size: 40,
-                      ),
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (_isRecording) ...[
+                          const Icon(
+                            Icons.mic,
+                            color: Colors.red,
+                            size: 50,
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                        if (_isRecording) ...[
+                          Text(
+                            _duration
+                                .toString()
+                                .split('.')
+                                .first
+                                .padLeft(8, "0"),
+                            style: const TextStyle(
+                                fontSize: 30, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                        GestureDetector(
+                          onTap: _toggleRecording,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            width: _isRecording ? 80 : 100,
+                            height: _isRecording ? 80 : 100,
+                            decoration: BoxDecoration(
+                              color: _isRecording ? Colors.red : Colors.blue,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              _isRecording ? Icons.stop : Icons.mic,
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        if (_isRecording) ...[
+                          ElevatedButton(
+                            onPressed: _cancelRecording,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12.0, horizontal: 24.0),
+                            ),
+                            child: const Text('Cancelar Gravação'),
+                          ),
+                        ],
+                        if (!_isRecording && _recordingPath == null) ...[
+                          const Text(
+                            'Toque no botão para iniciar a gravação',
+                            style: TextStyle(fontSize: 18),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 20),
-
-                  if (_isRecording) ...[
-                    ElevatedButton(
-                      onPressed: _cancelRecording,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 12.0, horizontal: 24.0),
-                      ),
-                      child: const Text('Cancelar Gravação'),
-                    ),
-                  ],
-
-                  if (!_isRecording && _recordingPath == null) ...[
-                    const Text(
-                      'Toque no botão para iniciar a gravação',
-                      style: TextStyle(fontSize: 18),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ],
-              ),
-            ),
           ),
         ),
       ),

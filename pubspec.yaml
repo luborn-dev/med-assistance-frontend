@@ -46,6 +46,7 @@ dependencies:
   mask_text_input_formatter: ^2.9.0
   intl: ^0.19.0
   audioplayers: ^6.1.0
+  flutter_dotenv: ^5.2.1
 
 dev_dependencies:
   flutter_test:
@@ -70,6 +71,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/logo.png
+    - .env.firewall.bypass
+    - .env.dev
 
   # To add assets to your application, add an assets section, like this:
   # assets:

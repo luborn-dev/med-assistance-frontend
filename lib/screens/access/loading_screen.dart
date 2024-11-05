@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:med_assistance_frontend/components/background_container.dart';
 import 'dart:async';
-
-import 'package:med_assistance_frontend/widget/gradient_container.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -14,16 +13,15 @@ class _LoadingScreenState extends State<LoadingScreen> {
   @override
   void initState() {
     super.initState();
-    // Delay of 3 seconds
     Future.delayed(const Duration(seconds: 4), () {
-      Navigator.pushReplacementNamed(context, '/welcome');
+      Navigator.pushReplacementNamed(context, '/login');
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: GradientContainer(
+      body: BackgroundContainer(
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -34,7 +32,9 @@ class _LoadingScreenState extends State<LoadingScreen> {
                 height: 300,
               ),
               SizedBox(height: 16),
-              CircularProgressIndicator(color: Colors.black,), // Loading icon
+              CircularProgressIndicator(
+                color: Colors.black,
+              ), // Loading icon
             ],
           ),
         ),

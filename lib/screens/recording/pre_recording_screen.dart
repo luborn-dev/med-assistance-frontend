@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:med_assistance_frontend/screens/recording_screen.dart';
-import 'package:med_assistance_frontend/widget/gradient_container.dart';
+import 'package:med_assistance_frontend/components/background_container.dart';
+import 'package:med_assistance_frontend/screens/recording/recording_screen.dart';
 import 'package:med_assistance_frontend/utils/procedure_options.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -23,8 +23,8 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
   List<String> _filteredProcedureOptions = [];
   List<Map<String, dynamic>> _patients = [];
 
-  bool _isPatientListEmpty = false; // Flag para indicar se lista de pacientes está vazia
-  bool _isLoading = true; // Flag para indicar se está carregando os dados
+  bool _isPatientListEmpty = false;
+  bool _isLoading = true;
 
   final Map<String, List<String>> _procedureOptions = {
     'Cirurgias': List.from(cirurgias)..sort(),
@@ -67,7 +67,7 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
     }
 
     setState(() {
-      _isLoading = false; // Desativa o estado de carregamento após completar o fetch
+      _isLoading = false;
     });
   }
 
@@ -109,7 +109,7 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GradientContainer(
+      body: BackgroundContainer(
         child: Stack(
           children: [
             Center(

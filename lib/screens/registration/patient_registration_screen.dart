@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:med_assistance_frontend/widget/gradient_container.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:med_assistance_frontend/components/background_container.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PatientRegistrationScreen extends StatefulWidget {
   const PatientRegistrationScreen({Key? key}) : super(key: key);
 
   @override
-  _PatientRegistrationScreenState createState() => _PatientRegistrationScreenState();
+  _PatientRegistrationScreenState createState() =>
+      _PatientRegistrationScreenState();
 }
 
 class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
@@ -55,7 +56,7 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
     if (picked != null) {
       setState(() {
         _birthdateController.text =
-        "${picked.toLocal()}".split(' ')[0]; // Formatar a data
+            "${picked.toLocal()}".split(' ')[0]; // Formatar a data
       });
     }
   }
@@ -146,7 +147,7 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GradientContainer(
+      body: BackgroundContainer(
         child: Stack(
           children: [
             Center(
@@ -161,7 +162,8 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
                       const SizedBox(height: 20),
                       _buildLabeledCpfField("CPF", _cpfController),
                       const SizedBox(height: 20),
-                      _buildLabeledDateField("Data de Nascimento", _birthdateController, context),
+                      _buildLabeledDateField(
+                          "Data de Nascimento", _birthdateController, context),
                       const SizedBox(height: 20),
                       _buildLabeledTextField("Endereço", _addressController),
                       const SizedBox(height: 20),
@@ -172,7 +174,8 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
                         child: ElevatedButton(
                           onPressed: _registerPatient,
                           style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 32.0),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 16.0, horizontal: 32.0),
                             backgroundColor: Colors.blue,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16.0),
@@ -208,7 +211,8 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
     );
   }
 
-  Widget _buildLabeledTextField(String label, TextEditingController controller) {
+  Widget _buildLabeledTextField(
+      String label, TextEditingController controller) {
     return SizedBox(
       width: MediaQuery.of(context).size.width * 0.8,
       child: Column(
@@ -244,7 +248,8 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
     );
   }
 
-  Widget _buildLabeledDateField(String label, TextEditingController controller, BuildContext context) {
+  Widget _buildLabeledDateField(
+      String label, TextEditingController controller, BuildContext context) {
     return SizedBox(
       width: MediaQuery.of(context).size.width * 0.8,
       child: Column(
@@ -323,7 +328,8 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
     );
   }
 
-  Widget _buildLabeledPhoneField(String label, TextEditingController controller) {
+  Widget _buildLabeledPhoneField(
+      String label, TextEditingController controller) {
     return SizedBox(
       width: MediaQuery.of(context).size.width * 0.8,
       child: Column(
