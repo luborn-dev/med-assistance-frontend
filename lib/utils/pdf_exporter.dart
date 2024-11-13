@@ -5,21 +5,24 @@ import 'package:printing/printing.dart';
 
 class PDFExporter {
   static Future<void> exportToPDF(
-      String procedureType,
-      String exactProcedureName,
-      String patientName,
-      String patientBirthdate,
-      String patientAddress,
-      String patientCpf,
-      String patientPhone,
-      String doctorName,
-      String doctorEmail,
-      String doctorAffiliation,
-      String transcription,
-      String summarize,
-      ) async {
+    String procedureType,
+    String exactProcedureName,
+    String patientName,
+    String patientBirthdate,
+    String patientStreet,
+    String patientCity,
+    String patientState,
+    String patientCep,
+    String patientNumber,
+    String patientCpf,
+    String patientPhone,
+    String doctorName,
+    String doctorEmail,
+    String doctorAffiliation,
+    String transcription,
+    String summarize,
+  ) async {
     final pdf = pw.Document();
-
     final String date = DateFormat('dd/MM/yyyy').format(DateTime.now());
 
     String patientBirthdateFormatted;
@@ -27,12 +30,9 @@ class PDFExporter {
       DateFormat format = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
       DateTime parsedDate = format.parse(patientBirthdate);
       patientBirthdateFormatted = DateFormat('dd/MM/yyyy').format(parsedDate);
-      print('Data formatada: $patientBirthdateFormatted');
     } catch (e) {
       patientBirthdateFormatted = 'Data de nascimento inválida';
-      print(patientBirthdateFormatted);
     }
-
 
     final image = await imageFromAssetBundle('assets/logo.png');
 
@@ -63,32 +63,18 @@ class PDFExporter {
           pw.Divider(),
           pw.SizedBox(height: 10),
 
-          pw.Text(
-            'Informações do Paciente:',
-            style: pw.TextStyle(
-              fontSize: 18,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColors.blueAccent,
-            ),
-          ),
+          _buildSectionTitle('Informações do Paciente:'),
           pw.SizedBox(height: 5),
           pw.Text('Nome: $patientName'),
           pw.Text('Data de Nascimento: $patientBirthdateFormatted'),
-          pw.Text('Endereço: $patientAddress'),
+          pw.Text(
+              'Endereço: $patientStreet, $patientNumber - $patientCity/$patientState'),
           pw.Text('CPF: $patientCpf'),
           pw.Text('Telefone: $patientPhone'),
           pw.SizedBox(height: 10),
           pw.Divider(),
 
-          // Informações do Médico
-          pw.Text(
-            'Informações do Médico:',
-            style: pw.TextStyle(
-              fontSize: 18,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColors.blueAccent,
-            ),
-          ),
+          _buildSectionTitle('Informações do Médico:'),
           pw.SizedBox(height: 5),
           pw.Text('Nome: $doctorName'),
           pw.Text('Email: $doctorEmail'),
@@ -96,36 +82,19 @@ class PDFExporter {
           pw.SizedBox(height: 10),
           pw.Divider(),
 
-          // Informações do Procedimento
-          pw.Text(
-            'Informações do Procedimento:',
-            style: pw.TextStyle(
-              fontSize: 18,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColors.blueAccent,
-            ),
-          ),
+          _buildSectionTitle('Informações do Procedimento:'),
           pw.SizedBox(height: 5),
           pw.Text('Tipo de Procedimento: $procedureType'),
           pw.Text('Nome Exato do Procedimento: $exactProcedureName'),
           pw.SizedBox(height: 10),
           pw.Divider(),
 
-          // Sumário do Procedimento
-          pw.Text(
-            'Sumário do Procedimento:',
-            style: pw.TextStyle(
-              fontSize: 18,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColors.blueAccent,
-            ),
-          ),
+          _buildSectionTitle('Sumário do Procedimento:'),
           pw.SizedBox(height: 10),
-          pw.Text(summarize),
+          pw.Text(summarize.isNotEmpty ? summarize : 'Sem sumário disponível'),
           pw.SizedBox(height: 20),
           pw.Divider(),
 
-          // Rodapé
           pw.Align(
             alignment: pw.Alignment.centerRight,
             child: pw.Text(
@@ -149,6 +118,17 @@ class PDFExporter {
 
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
+    );
+  }
+
+  static pw.Widget _buildSectionTitle(String title) {
+    return pw.Text(
+      title,
+      style: pw.TextStyle(
+        fontSize: 18,
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.blueAccent,
+      ),
     );
   }
 }

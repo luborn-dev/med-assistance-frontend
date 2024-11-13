@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:med_assistance_frontend/components/background_container.dart';
 import 'package:med_assistance_frontend/components/bottom_navigation.dart';
 import 'package:med_assistance_frontend/services/content_service.dart';
+import 'package:med_assistance_frontend/components/search_field.dart'; // Importa o SearchField
 
 class FaqScreen extends StatefulWidget {
   const FaqScreen({Key? key}) : super(key: key);
@@ -11,7 +12,6 @@ class FaqScreen extends StatefulWidget {
 }
 
 class _FaqScreenState extends State<FaqScreen> {
-  final TextEditingController _searchController = TextEditingController();
   final ContentService _contentService = ContentService();
   List<Map<String, dynamic>> faqs = [];
   List<Map<String, dynamic>> filteredFaqs = [];
@@ -22,7 +22,6 @@ class _FaqScreenState extends State<FaqScreen> {
   void initState() {
     super.initState();
     _fetchFaqs();
-    _searchController.addListener(_filterFaqs);
   }
 
   void _fetchFaqs() async {
@@ -47,22 +46,18 @@ class _FaqScreenState extends State<FaqScreen> {
     isExpandedList = List.generate(filteredFaqs.length, (index) => false);
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _filterFaqs() {
-    final query = _searchController.text.toLowerCase();
+  void _filterFaqs(String query) {
     setState(() {
       filteredFaqs = faqs
           .where((faq) =>
               (faq['question'] ?? '')
                   .toString()
                   .toLowerCase()
-                  .contains(query) ||
-              (faq['answer'] ?? '').toString().toLowerCase().contains(query))
+                  .contains(query.toLowerCase()) ||
+              (faq['answer'] ?? '')
+                  .toString()
+                  .toLowerCase()
+                  .contains(query.toLowerCase()))
           .toList();
       _initializeIsExpandedList();
     });
@@ -75,10 +70,13 @@ class _FaqScreenState extends State<FaqScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              const SizedBox(height: 16),
-              Container(
+              const SizedBox(height: 32),
+              Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: _buildSearchBar(),
+                child: SearchField(
+                  onSearch: (value) => _filterFaqs(value),
+                  label: "Digite uma palavra-chave para encontrar respostas",
+                ),
               ),
               const SizedBox(height: 16),
               _isLoading
@@ -105,23 +103,6 @@ class _FaqScreenState extends State<FaqScreen> {
             Navigator.pushReplacementNamed(context, '/manageAccount');
           }
         },
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return TextField(
-      controller: _searchController,
-      decoration: InputDecoration(
-        hintText: 'Pesquisar...',
-        prefixIcon: const Icon(Icons.search),
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.9),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 16.0),
       ),
     );
   }

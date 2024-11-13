@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:med_assistance_frontend/services/procedures_service.dart';
+import 'package:med_assistance_frontend/services/recording_service.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -156,9 +156,9 @@ class _RecordingScreenState extends State<RecordingScreen> {
     });
 
     try {
-      final procedureService = ProcedureService();
+      final recordingService = RecordingService();
       final recordingFile = File(_recordingPath!);
-      await procedureService.sendRecording(
+      await recordingService.sendRecording(
         procedureData: widget.procedureData,
         recordingFile: recordingFile,
         context: context,

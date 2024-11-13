@@ -23,8 +23,7 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _stateController = TextEditingController();
   final TextEditingController _numberController = TextEditingController();
-  final TextEditingController _phoneController =
-      TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   String? _gender;
 
   final PatientService _patientService = PatientService();
@@ -51,8 +50,7 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
 
   Future<void> _loadDoctorId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-    });
+    setState(() {});
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -71,6 +69,7 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
 
   Future<void> _fetchAddressByZipCode() async {
     final zipCode = _zipCodeController.text.replaceAll(RegExp(r'\D'), '');
+    print(zipCode);
     if (zipCode.length == 8) {
       try {
         final data = await _patientService.fetchAddressByZipCode(zipCode);
@@ -294,7 +293,10 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
                           icon: Icons.location_on,
                           inputFormatters: [_zipCodeFormatter],
                           keyboardType: TextInputType.number,
-                          onChanged: (_) => _fetchAddressByZipCode()),
+                          onChanged: (_) => {
+                                if (_zipCodeController.text.length == 9)
+                                  {_fetchAddressByZipCode()}
+                              }),
                       const SizedBox(height: 16),
                       _buildTextField(_streetController, 'Rua',
                           icon: Icons.streetview),
