@@ -159,12 +159,73 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
                         Expanded(
                           child: filteredRecordings.isEmpty
                               ? _buildNoRecordingsContent()
-                              : _buildGroupedRecordingsContent(),
+                              : _buildMinimalistRecordingsContent(),
                         ),
                       ],
                     ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMinimalistRecordingsContent() {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: filteredRecordings.length,
+      itemBuilder: (context, index) {
+        final procedure = filteredRecordings[index];
+        final pacienteInfo = procedure['paciente_info'];
+        final gravacoes = procedure['gravacoes'] as List<dynamic>;
+        final transcriptions = gravacoes.map((g) => g['transcricao']).toList();
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 1,
+            child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              title: Text(
+                pacienteInfo['name'] ?? 'Paciente desconhecido',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              subtitle: Text(
+                'Procedimentos: ${gravacoes.length}',
+                style: const TextStyle(color: Colors.black54),
+              ),
+              trailing: IconButton(
+                icon: Icon(Icons.history, color: Colors.blue.shade700),
+                onPressed: () =>
+                    generateMedicalHistory(pacienteInfo['id'], transcriptions),
+              ),
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  builder: (_) {
+                    return ListView(
+                      padding: const EdgeInsets.all(16.0),
+                      children: gravacoes.map((gravacao) {
+                        return RecordingCard(
+                          pacienteInfo: pacienteInfo,
+                          recording: gravacao,
+                          onDelete: () => deleteRecording(
+                              procedure['procedure_id'], gravacao['id']),
+                        );
+                      }).toList(),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -227,72 +288,6 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildGroupedRecordingsContent() {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: filteredRecordings.length,
-      itemBuilder: (context, index) {
-        final procedure = filteredRecordings[index];
-        final pacienteInfo = procedure['paciente_info'];
-        final gravacoes = procedure['gravacoes'] as List<dynamic>;
-        final transcriptions = gravacoes.map((g) => g['transcricao']).toList();
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
-          child: Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 3,
-            child: ExpansionTile(
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        pacienteInfo['name'] ?? 'Paciente desconhecido',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Procedimentos: ${gravacoes.length}',
-                        style: const TextStyle(color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => generateMedicalHistory(
-                        pacienteInfo['id'], transcriptions),
-                    icon: const Icon(Icons.description, size: 20),
-                    label: const Text("Histórico"),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.blue.shade700),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              children: gravacoes.map<Widget>((gravacao) {
-                return RecordingCard(
-                  pacienteInfo: pacienteInfo,
-                  recording: gravacao,
-                  onDelete: () => deleteRecording(
-                      procedure['procedure_id'], gravacao['id']),
-                );
-              }).toList(),
-            ),
-          ),
-        );
-      },
     );
   }
 }

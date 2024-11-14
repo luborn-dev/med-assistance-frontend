@@ -1,26 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:med_assistance_frontend/screens/access/loading_screen.dart';
 import 'package:med_assistance_frontend/screens/access/login_screen.dart';
 import 'package:med_assistance_frontend/screens/access/signup_screen.dart';
 import 'package:med_assistance_frontend/screens/faq/faq_screen.dart';
-import 'package:med_assistance_frontend/screens/access/loading_screen.dart';
-import 'package:med_assistance_frontend/screens/registration/patient_registration_screen.dart';
 import 'package:med_assistance_frontend/screens/home_screen.dart';
-import 'package:med_assistance_frontend/screens/recording/recording_screen.dart';
 import 'package:med_assistance_frontend/screens/profile/profile_screen.dart';
-import 'package:med_assistance_frontend/screens/recording/pre_recording_screen.dart';
 import 'package:med_assistance_frontend/screens/recording/manage_recordings_screen.dart';
+import 'package:med_assistance_frontend/screens/recording/pre_recording_screen.dart';
+import 'package:med_assistance_frontend/screens/registration/patient_registration_screen.dart';
+import 'package:med_assistance_frontend/services/content_service.dart';
 
 Future<void> main(List<String> args) async {
   final environment = args.isNotEmpty ? args[0] : 'dev';
-
   await dotenv.load(fileName: ".env.$environment");
 
-  runApp(MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    final faqData = await fetchAndCacheContent('faq');
+    final cirurgiasData = await fetchAndCacheContent('cirurgias');
+    final consultasData = await fetchAndCacheContent('consultas');
+
+    runApp(MyApp(
+        faqData: faqData,
+        cirurgiasData: cirurgiasData,
+        consultasData: consultasData));
+  } catch (error) {
+    print('Erro ao carregar dados iniciais: $error');
+    runApp(const MyApp(faqData: [], cirurgiasData: [], consultasData: []));
+  }
 }
 
 class MyApp extends StatelessWidget {
+  final List<dynamic> faqData;
+  final List<dynamic> cirurgiasData;
+  final List<dynamic> consultasData;
+
+  const MyApp({
+    Key? key,
+    required this.faqData,
+    required this.cirurgiasData,
+    required this.consultasData,
+  }) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -29,27 +54,25 @@ class MyApp extends StatelessWidget {
       darkTheme: _buildDarkTheme(),
       themeMode: ThemeMode.system,
       home: const LoadingScreen(),
-      onGenerateRoute: (settings) {
-        if (settings.name == '/recording') {
-          final procedureData = settings.arguments as Map<String, dynamic>;
-          return MaterialPageRoute(
-            builder: (context) {
-              return RecordingScreen(procedureData: procedureData);
-            },
-          );
-        }
-        return null;
-      },
       routes: {
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignupScreen(),
         '/main': (context) => const MainScreen(),
         '/manageAccount': (context) => const ProfileScreen(),
         '/preRecording': (context) => const PreRecordingScreen(),
-        '/manageRecordings': (context) => ManageRecordingsScreen(),
-        '/patientregistration': (context) => PatientRegistrationScreen(),
-        '/faq': (context) => FaqScreen(),
+        '/manageRecordings': (context) => const ManageRecordingsScreen(),
+        '/patientregistration': (context) => const PatientRegistrationScreen(),
+        '/faq': (context) => const FaqScreen(),
       },
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('pt', 'BR'),
+        Locale('en', ''),
+      ],
     );
   }
 

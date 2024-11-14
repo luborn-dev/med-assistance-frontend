@@ -72,6 +72,7 @@ class RecordingService {
       request.fields['paciente_id'] = procedureData['paciente_id'];
       request.fields['medico_id'] = procedureData['medico_id'];
       request.fields['tipo'] = procedureData['tipo'];
+      request.fields['procedimento'] = procedureData['procedimento'];
       request.fields['transcricao'] = '';
       request.fields['sumarizacao'] = '';
 

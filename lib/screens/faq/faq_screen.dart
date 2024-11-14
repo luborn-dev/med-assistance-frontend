@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:med_assistance_frontend/components/background_container.dart';
 import 'package:med_assistance_frontend/components/bottom_navigation.dart';
-import 'package:med_assistance_frontend/services/content_service.dart';
-import 'package:med_assistance_frontend/components/search_field.dart'; // Importa o SearchField
+import 'package:med_assistance_frontend/components/search_field.dart';
+
+import '../../services/content_service.dart';
 
 class FaqScreen extends StatefulWidget {
   const FaqScreen({Key? key}) : super(key: key);
@@ -12,7 +13,6 @@ class FaqScreen extends StatefulWidget {
 }
 
 class _FaqScreenState extends State<FaqScreen> {
-  final ContentService _contentService = ContentService();
   List<Map<String, dynamic>> faqs = [];
   List<Map<String, dynamic>> filteredFaqs = [];
   List<bool> isExpandedList = [];
@@ -25,11 +25,14 @@ class _FaqScreenState extends State<FaqScreen> {
   }
 
   void _fetchFaqs() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
-      List<Map<String, dynamic>> fetchedFaqs =
-          await _contentService.fetchContentsByType("faq");
+      List<dynamic> fetchedFaqs = await fetchAndCacheContent("faq");
       setState(() {
-        faqs = fetchedFaqs;
+        faqs = List<Map<String, dynamic>>.from(fetchedFaqs);
         filteredFaqs = faqs;
         _initializeIsExpandedList();
         _isLoading = false;

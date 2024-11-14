@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:med_assistance_frontend/components/background_container.dart';
 import 'package:med_assistance_frontend/services/patient_service.dart';
+import 'package:med_assistance_frontend/utils/cpf_validator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PatientRegistrationScreen extends StatefulWidget {
@@ -56,13 +57,16 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
+      locale: const Locale('pt'),
       initialDate: DateTime.now(),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
     );
+
     if (picked != null) {
       setState(() {
-        _birthdateController.text = "${picked.toLocal()}".split(' ')[0];
+        _birthdateController.text =
+            "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
       });
     }
   }
@@ -377,7 +381,6 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
         if (value == null || value.isEmpty) {
           return 'Por favor, preencha este campo';
         }
-        // Validação adicional para o telefone
         if (controller == _phoneController) {
           String pattern = r'^\(\d{2}\) \d{5}-\d{4}$';
           RegExp regex = RegExp(pattern);
@@ -385,6 +388,10 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
             return 'Por favor, insira um telefone válido';
           }
         }
+        if (controller == _cpfController && !CPFValidator.validarCPF(value)) {
+          return 'Por favor, insira um CPF válido';
+        }
+
         return null;
       },
     );
@@ -439,6 +446,7 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
     return TextFormField(
       controller: controller,
       readOnly: true,
+      inputFormatters: [_birthdateFormatter],
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: const Icon(Icons.calendar_today, color: Colors.grey),
@@ -462,4 +470,9 @@ class _PatientRegistrationScreenState extends State<PatientRegistrationScreen> {
       },
     );
   }
+
+  final _birthdateFormatter = MaskTextInputFormatter(
+    mask: '##/##/####',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
 }

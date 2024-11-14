@@ -64,7 +64,7 @@ class RecordingCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Gerar relatório',
+                        'Gerar relatório dessa consulta',
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 18),
                       ),

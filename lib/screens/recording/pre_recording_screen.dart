@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:med_assistance_frontend/components/background_container.dart';
 import 'package:med_assistance_frontend/screens/recording/recording_screen.dart';
-import 'package:med_assistance_frontend/utils/procedure_options.dart';
+import 'package:med_assistance_frontend/services/content_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:med_assistance_frontend/services/patient_service.dart';
 
@@ -24,15 +24,13 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
 
   String? _selectedPatientId;
   String? _doctorId;
-
   bool _isPatientListEmpty = false;
   bool _isLoading = true;
 
   final PatientService _patientService = PatientService();
-
-  final Map<String, List<String>> _procedureOptions = {
-    'Cirurgias': List.from(cirurgias)..sort(),
-    'Consulta': List.from(consultas)..sort(),
+  Map<String, List<String>> _procedureOptions = {
+    'Cirurgias': [],
+    'Consulta': [],
   };
 
   @override
@@ -53,12 +51,13 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
   Future<void> _loadInitialData() async {
     await _loadDoctorId();
     await _loadPatients();
+    await _loadProcedures();
   }
 
   Future<void> _loadDoctorId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      _doctorId = prefs.getString('userId');
+      _doctorId = prefs.getString('doctorId');
     });
   }
 
@@ -81,119 +80,29 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
         const SnackBar(content: Text('Erro ao carregar o ID do médico')),
       );
     }
-
     setState(() {
       _isLoading = false;
     });
   }
 
-  void _navigateToRecordingScreen(Map<String, dynamic> procedureData) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RecordingScreen(procedureData: procedureData),
-      ),
-    );
-  }
+  Future<void> _loadProcedures() async {
+    try {
+      final cirurgiasData = await fetchAndCacheContent('cirurgias');
+      final consultasData = await fetchAndCacheContent('consultas');
 
-  Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      bool isValidPatient = _patients.any((patient) =>
-          patient['name'].toLowerCase() ==
-          _patientController.text.toLowerCase());
-      if (!isValidPatient) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor, selecione um paciente válido.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      if (!_filteredProcedureOptions.any((option) =>
-          option.toLowerCase() == _selectedExactProcedureName?.toLowerCase())) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor, selecione um procedimento válido.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      bool confirmed = await _showConfirmationDialog();
-      if (!confirmed) return;
-
-      var procedureData = {
-        'paciente_id': _selectedPatientId,
-        'medico_id': _doctorId,
-        'tipo': _selectedProcedureType,
-        'procedimento': _selectedExactProcedureName,
-      };
-
-      _navigateToRecordingScreen(procedureData);
+      setState(() {
+        _procedureOptions = {
+          'Cirurgias':
+              cirurgiasData.map((item) => item['name'].toString()).toList(),
+          'Consulta':
+              consultasData.map((item) => item['name'].toString()).toList(),
+        };
+      });
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao carregar procedimentos: $error')),
+      );
     }
-  }
-
-  Future<bool> _showConfirmationDialog() async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Confirmação de Dados'),
-              content: SingleChildScrollView(
-                child: ListBody(
-                  children: <Widget>[
-                    _buildConfirmationText(
-                        'Tipo de Procedimento', _selectedProcedureType ?? ''),
-                    _buildConfirmationText('Paciente', _patientController.text),
-                    _buildConfirmationText(
-                        'Procedimento', _selectedExactProcedureName ?? ''),
-                  ],
-                ),
-              ),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text('Cancelar'),
-                  onPressed: () {
-                    Navigator.of(context).pop(false);
-                  },
-                ),
-                ElevatedButton(
-                  child: const Text('Confirmar'),
-                  onPressed: () {
-                    Navigator.of(context).pop(true);
-                  },
-                ),
-              ],
-            );
-          },
-        ) ??
-        false;
-  }
-
-  Widget _buildConfirmationText(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4.0),
-      child: RichText(
-        text: TextSpan(
-          text: '$label: ',
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
-          children: [
-            TextSpan(
-              text: value,
-              style: const TextStyle(
-                fontWeight: FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _filterProcedureOptions() {
@@ -206,10 +115,6 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
             .toList();
       });
     }
-  }
-
-  void _navigateToPatientRegistration() {
-    Navigator.pushNamed(context, '/patientregistration');
   }
 
   @override
@@ -280,7 +185,6 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
     );
   }
 
-  /// Constrói a mensagem quando nenhum paciente é encontrado.
   Widget _buildNoPatientsMessage() {
     return Center(
       child: Padding(
@@ -335,12 +239,16 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
     );
   }
 
+  void _navigateToPatientRegistration() {
+    Navigator.pushNamed(context, '/patientregistration');
+  }
+
   Widget _buildProcedureTypeDropdown() {
     return _buildLabeledDropdownField<String>(
       label: 'Tipo de Procedimento',
       value: _selectedProcedureType,
       items: _procedureOptions.keys.toList(),
-      icon: Icons.category,
+      icon: Icons.local_hospital,
       onChanged: (value) {
         setState(() {
           _selectedProcedureType = value;
@@ -445,6 +353,63 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
     );
   }
 
+  Widget _buildLabeledTypeAheadField<T>({
+    required TextEditingController controller,
+    required String label,
+    required String hintText,
+    required IconData icon,
+    required SuggestionsCallback<T> suggestionsCallback,
+    required ItemBuilder<T> itemBuilder,
+    required SuggestionSelectionCallback<T> onSuggestionSelected,
+    FormFieldValidator<String>? validator,
+    bool enabled = true, // Parâmetro para controlar se o campo está habilitado
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Label
+        Text(
+          '$label *',
+          style: const TextStyle(
+            color: Colors.blue,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 5),
+        // TypeAheadField
+        TypeAheadFormField<T>(
+          textFieldConfiguration: TextFieldConfiguration(
+            controller: controller,
+            enabled: enabled,
+            decoration: InputDecoration(
+              hintText: hintText,
+              prefixIcon: Icon(icon, color: Colors.grey),
+              filled: true,
+              fillColor: Colors.grey.shade100.withOpacity(0.8),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: const BorderSide(color: Colors.blue, width: 1.5),
+              ),
+              labelStyle: const TextStyle(color: Colors.grey),
+            ),
+          ),
+          suggestionsCallback: suggestionsCallback,
+          itemBuilder: itemBuilder,
+          onSuggestionSelected: onSuggestionSelected,
+          validator: validator,
+          noItemsFoundBuilder: (context) => const SizedBox(),
+        ),
+      ],
+    );
+  }
+
   Widget _buildLabeledDropdownField<T>({
     required String label,
     required T? value,
@@ -498,61 +463,112 @@ class _PreRecordingScreenState extends State<PreRecordingScreen> {
     );
   }
 
-  Widget _buildLabeledTypeAheadField<T>({
-    required TextEditingController controller,
-    required String label,
-    required String hintText,
-    required IconData icon,
-    required SuggestionsCallback<T> suggestionsCallback,
-    required ItemBuilder<T> itemBuilder,
-    required SuggestionSelectionCallback<T> onSuggestionSelected,
-    FormFieldValidator<String>? validator,
-    bool enabled =
-        true, // Adicionado parâmetro para controlar se o campo está habilitado
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Label
-        Text(
-          '$label *',
+  Future<void> _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      bool isValidPatient = _patients.any((patient) =>
+          patient['name'].toLowerCase() ==
+          _patientController.text.toLowerCase());
+      if (!isValidPatient) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor, selecione um paciente válido.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      if (!_filteredProcedureOptions.any((option) =>
+          option.toLowerCase() == _selectedExactProcedureName?.toLowerCase())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor, selecione um procedimento válido.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      bool confirmed = await _showConfirmationDialog();
+      if (!confirmed) return;
+
+      var procedureData = {
+        'paciente_id': _selectedPatientId,
+        'medico_id': _doctorId,
+        'tipo': _selectedProcedureType,
+        'procedimento': _selectedExactProcedureName,
+      };
+
+      _navigateToRecordingScreen(procedureData);
+    }
+  }
+
+  Future<bool> _showConfirmationDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Confirmação de Dados'),
+              content: SingleChildScrollView(
+                child: ListBody(
+                  children: <Widget>[
+                    _buildConfirmationText(
+                        'Tipo de Procedimento', _selectedProcedureType ?? ''),
+                    _buildConfirmationText('Paciente', _patientController.text),
+                    _buildConfirmationText(
+                        'Procedimento', _selectedExactProcedureName ?? ''),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('Cancelar'),
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                ),
+                ElevatedButton(
+                  child: const Text('Confirmar'),
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+  }
+
+  Widget _buildConfirmationText(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: RichText(
+        text: TextSpan(
+          text: '$label: ',
           style: const TextStyle(
-            color: Colors.blue,
-            fontSize: 16,
+            color: Colors.black,
             fontWeight: FontWeight.bold,
           ),
-        ),
-        const SizedBox(height: 5),
-        // TypeAheadField
-        TypeAheadFormField<T>(
-          textFieldConfiguration: TextFieldConfiguration(
-            controller: controller,
-            enabled: enabled,
-            decoration: InputDecoration(
-              hintText: hintText,
-              prefixIcon: Icon(icon, color: Colors.grey),
-              filled: true,
-              fillColor: Colors.grey.shade100.withOpacity(0.8),
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: BorderSide.none,
+          children: [
+            TextSpan(
+              text: value,
+              style: const TextStyle(
+                fontWeight: FontWeight.normal,
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: const BorderSide(color: Colors.blue, width: 1.5),
-              ),
-              labelStyle: const TextStyle(color: Colors.grey),
             ),
-          ),
-          suggestionsCallback: suggestionsCallback,
-          itemBuilder: itemBuilder,
-          onSuggestionSelected: onSuggestionSelected,
-          validator: validator,
-          noItemsFoundBuilder: (context) => const SizedBox(),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  void _navigateToRecordingScreen(Map<String, dynamic> procedureData) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RecordingScreen(procedureData: procedureData),
+      ),
     );
   }
 }

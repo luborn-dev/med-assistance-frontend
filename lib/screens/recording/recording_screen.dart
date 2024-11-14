@@ -163,6 +163,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
         recordingFile: recordingFile,
         context: context,
       );
+      Navigator.of(context).pushReplacementNamed('/main');
     } catch (e) {
       _showError('Erro ao enviar a gravação: $e');
     } finally {
