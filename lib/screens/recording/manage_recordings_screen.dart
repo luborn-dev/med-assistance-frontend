@@ -1,15 +1,111 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:med_assistance_frontend/components/background_container.dart';
 import 'package:med_assistance_frontend/services/recording_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../components/recording_card.dart';
 import '../../components/search_field.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class ManageRecordingsScreen extends StatefulWidget {
   const ManageRecordingsScreen({Key? key}) : super(key: key);
 
   @override
   _ManageRecordingsScreenState createState() => _ManageRecordingsScreenState();
+}
+
+Future<void> generatePdf(String patientName, String medicalSummary) async {
+  final pdf = pw.Document();
+  final String date = DateFormat('dd/MM/yyyy').format(DateTime.now());
+
+  final fontData = await rootBundle.load('assets/Roboto-Regular.ttf');
+  final fontBoldData = await rootBundle.load('assets/Roboto-Bold.ttf');
+  final font = pw.Font.ttf(fontData);
+  final fontBold = pw.Font.ttf(fontBoldData);
+
+  final summaryLines = medicalSummary.split('\n');
+
+  final image = await imageFromAssetBundle('assets/logo.png');
+
+  pdf.addPage(
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(20),
+      build: (pw.Context context) => [
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            image != null ? pw.Image(image, height: 50) : pw.SizedBox(),
+            pw.Text(
+              'Resumo Médico',
+              style: pw.TextStyle(
+                fontSize: 20,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.blue,
+              ),
+            ),
+            pw.Text(
+              'Data: $date',
+              style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 10),
+        pw.Divider(),
+        pw.SizedBox(height: 10),
+        _buildSectionTitle('Dados do Paciente:', fontBold),
+        pw.SizedBox(height: 5),
+        pw.Text('Nome: $patientName',
+            style: pw.TextStyle(font: font, fontSize: 16)),
+        pw.SizedBox(height: 10),
+        pw.Divider(),
+        _buildSectionTitle('Resumo Médico Geral:', fontBold),
+        pw.SizedBox(height: 10),
+        ...summaryLines.map((line) => pw.Text(
+              line,
+              style: pw.TextStyle(font: font, fontSize: 14),
+            )),
+        pw.SizedBox(height: 20),
+        pw.Divider(),
+        pw.Align(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Text(
+            'Gerado em: $date',
+            style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey),
+          ),
+        ),
+      ],
+      footer: (pw.Context context) {
+        return pw.Container(
+          alignment: pw.Alignment.centerRight,
+          margin: const pw.EdgeInsets.only(top: 1.0 * PdfPageFormat.cm),
+          child: pw.Text(
+            'Página ${context.pageNumber} de ${context.pagesCount}',
+            style: const pw.TextStyle(color: PdfColors.grey, fontSize: 12),
+          ),
+        );
+      },
+    ),
+  );
+
+  await Printing.layoutPdf(
+    onLayout: (PdfPageFormat format) async => pdf.save(),
+  );
+}
+
+pw.Widget _buildSectionTitle(String title, pw.Font fontBold) {
+  return pw.Text(
+    title,
+    style: pw.TextStyle(
+      font: fontBold,
+      fontSize: 18,
+      fontWeight: pw.FontWeight.bold,
+      color: PdfColors.blueAccent,
+    ),
+  );
 }
 
 class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
@@ -20,6 +116,9 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
   String? doctorId;
   String? errorMessage;
   String searchQuery = '';
+  bool isGeneratingHistory = false;
+  String patientId = '';
+  Map<String, bool> isGeneratingHistoryMap = {};
 
   @override
   void initState() {
@@ -66,17 +165,25 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
     }
   }
 
-  Future<void> generateMedicalHistory(
-      String patientId, List<dynamic> transcriptions) async {
+  Future<String> generateMedicalHistory(
+      String patientId, List<dynamic> sumarizacoes) async {
+    setState(() {
+      isGeneratingHistoryMap[patientId] = true;
+    });
     try {
-      await recordingService.generateMedicalHistory(
-          patientId: patientId, transcriptions: transcriptions);
+      final history = await recordingService.generateMedicalHistory(
+        patientId: patientId,
+        sumarizacoes: sumarizacoes,
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Histórico médico gerado com sucesso'),
           backgroundColor: Colors.green,
         ),
       );
+
+      return history;
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -84,6 +191,11 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
           backgroundColor: Colors.red,
         ),
       );
+      return ''; // Retorna uma string vazia em caso de erro
+    } finally {
+      setState(() {
+        isGeneratingHistoryMap[patientId] = false;
+      });
     }
   }
 
@@ -93,6 +205,7 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
       setState(() {
         recordings = proceduresData;
         filteredRecordings = proceduresData;
+        patientId = recordings[0]["gravacoes"][0]["paciente_id"];
         isLoading = false;
       });
     } catch (e) {
@@ -128,7 +241,7 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
         elevation: 0,
         centerTitle: true,
         title: const Text(
-          "Gerenciar Gravações",
+          "Histórico de Pacientes",
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w600,
@@ -176,7 +289,7 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
         final procedure = filteredRecordings[index];
         final pacienteInfo = procedure['paciente_info'];
         final gravacoes = procedure['gravacoes'] as List<dynamic>;
-        final transcriptions = gravacoes.map((g) => g['transcricao']).toList();
+        final sumarizacoes = gravacoes.map((g) => g['sumarizacao']).toList();
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 8.0),
@@ -199,10 +312,34 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
                 'Procedimentos: ${gravacoes.length}',
                 style: const TextStyle(color: Colors.black54),
               ),
-              trailing: IconButton(
-                icon: Icon(Icons.history, color: Colors.blue.shade700),
-                onPressed: () =>
-                    generateMedicalHistory(pacienteInfo['id'], transcriptions),
+              trailing: FittedBox(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.history, color: Colors.blue.shade700),
+                      onPressed: () async {
+                        final historyText = await generateMedicalHistory(
+                            patientId, sumarizacoes);
+
+                        if (historyText.isNotEmpty) {
+                          generatePdf(
+                            pacienteInfo['name'] ?? 'Paciente desconhecido',
+                            historyText,
+                          );
+                        }
+                      },
+                    ),
+                    const Text(
+                      'Gerar resumo clínico',
+                      style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
               onTap: () {
                 showModalBottomSheet(

@@ -8,12 +8,15 @@ import 'package:http_parser/http_parser.dart';
 class RecordingService {
   final String _baseUrl;
   final String _proceduresEndpoint;
+  final String _medicalHistoryEndpoint;
 
   RecordingService()
       : _baseUrl = dotenv.env['API_BASE_PATH_URL'] ??
             (throw Exception("API_BASE_PATH_URL is not set in .env")),
         _proceduresEndpoint = dotenv.env['PROCEDURES_ENDPOINT'] ??
-            (throw Exception("PROCEDURES_ENDPOINT is not set in .env"));
+            (throw Exception("PROCEDURES_ENDPOINT is not set in .env")),
+        _medicalHistoryEndpoint = dotenv.env["MEDICAL_HISTORY_ENDPOINT"] ??
+            (throw Exception("MEDICAL_HISTORY_ENDPOINT is not set in .env"));
 
   Future<List<dynamic>> fetchRecordings() async {
     final response = await http.get(
@@ -24,7 +27,6 @@ class RecordingService {
     if (response.statusCode == 200) {
       List<dynamic> recordings = jsonDecode(utf8.decode(response.bodyBytes));
 
-      // Converter strings de data para DateTime
       recordings = recordings.map((recording) {
         recording['data_gravacao'] = recording['data_gravacao'] != null
             ? DateTime.parse(recording['data_gravacao'] as String)
@@ -98,7 +100,26 @@ class RecordingService {
     }
   }
 
-  Future<void> generateMedicalHistory(
-      {required String patientId,
-      required List<dynamic> transcriptions}) async {}
+  Future<String> generateMedicalHistory({
+    required String patientId,
+    required List<dynamic> sumarizacoes,
+  }) async {
+    final url = Uri.parse('$_baseUrl/$_medicalHistoryEndpoint');
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'patientId': patientId,
+        'sumarizacoes': sumarizacoes,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final responseBody = jsonDecode(response.body);
+      return responseBody ?? 'Histórico médico indisponível';
+    } else {
+      throw Exception('Erro ao gerar o histórico médico');
+    }
+  }
 }

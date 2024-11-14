@@ -76,6 +76,8 @@ flutter:
   assets:
     - assets/logo.png
     - assets/logo_no_text.png
+    - assets/Roboto-Regular.ttf
+    - assets/Roboto-Bold.ttf
     - .env.firewall.bypass
     - .env.dev
 

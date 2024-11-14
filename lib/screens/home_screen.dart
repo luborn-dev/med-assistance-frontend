@@ -91,7 +91,7 @@ class _MainScreenState extends State<MainScreen> {
                           Navigator.pushNamed(context, "/preRecording"),
                     ),
                     _buildActionCard(
-                      title: "Gerenciar Gravações",
+                      title: "Histórico de pacientes",
                       icon: Icons.manage_search,
                       color: Colors.blue[400]!,
                       onTap: () =>
@@ -135,7 +135,7 @@ class _MainScreenState extends State<MainScreen> {
           children: [
             Icon(
               icon,
-              size: 60,
+              size: 80,
               color: color,
             ),
             const SizedBox(height: 8),
