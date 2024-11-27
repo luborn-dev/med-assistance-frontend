@@ -17,97 +17,6 @@ class ManageRecordingsScreen extends StatefulWidget {
   _ManageRecordingsScreenState createState() => _ManageRecordingsScreenState();
 }
 
-Future<void> generatePdf(String patientName, String medicalSummary) async {
-  final pdf = pw.Document();
-  final String date = DateFormat('dd/MM/yyyy').format(DateTime.now());
-
-  final fontData = await rootBundle.load('assets/Roboto-Regular.ttf');
-  final fontBoldData = await rootBundle.load('assets/Roboto-Bold.ttf');
-  final font = pw.Font.ttf(fontData);
-  final fontBold = pw.Font.ttf(fontBoldData);
-
-  final summaryLines = medicalSummary.split('\n');
-
-  final image = await imageFromAssetBundle('assets/logo.png');
-
-  pdf.addPage(
-    pw.MultiPage(
-      pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(20),
-      build: (pw.Context context) => [
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            image != null ? pw.Image(image, height: 50) : pw.SizedBox(),
-            pw.Text(
-              'Resumo Médico',
-              style: pw.TextStyle(
-                fontSize: 20,
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.blue,
-              ),
-            ),
-            pw.Text(
-              'Data: $date',
-              style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey),
-            ),
-          ],
-        ),
-        pw.SizedBox(height: 10),
-        pw.Divider(),
-        pw.SizedBox(height: 10),
-        _buildSectionTitle('Dados do Paciente:', fontBold),
-        pw.SizedBox(height: 5),
-        pw.Text('Nome: $patientName',
-            style: pw.TextStyle(font: font, fontSize: 16)),
-        pw.SizedBox(height: 10),
-        pw.Divider(),
-        _buildSectionTitle('Resumo Médico Geral:', fontBold),
-        pw.SizedBox(height: 10),
-        ...summaryLines.map((line) => pw.Text(
-              line,
-              style: pw.TextStyle(font: font, fontSize: 14),
-            )),
-        pw.SizedBox(height: 20),
-        pw.Divider(),
-        pw.Align(
-          alignment: pw.Alignment.centerRight,
-          child: pw.Text(
-            'Gerado em: $date',
-            style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey),
-          ),
-        ),
-      ],
-      footer: (pw.Context context) {
-        return pw.Container(
-          alignment: pw.Alignment.centerRight,
-          margin: const pw.EdgeInsets.only(top: 1.0 * PdfPageFormat.cm),
-          child: pw.Text(
-            'Página ${context.pageNumber} de ${context.pagesCount}',
-            style: const pw.TextStyle(color: PdfColors.grey, fontSize: 12),
-          ),
-        );
-      },
-    ),
-  );
-
-  await Printing.layoutPdf(
-    onLayout: (PdfPageFormat format) async => pdf.save(),
-  );
-}
-
-pw.Widget _buildSectionTitle(String title, pw.Font fontBold) {
-  return pw.Text(
-    title,
-    style: pw.TextStyle(
-      font: fontBold,
-      fontSize: 18,
-      fontWeight: pw.FontWeight.bold,
-      color: PdfColors.blueAccent,
-    ),
-  );
-}
-
 class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
   final RecordingService recordingService = RecordingService();
   List<dynamic> recordings = [];
@@ -119,6 +28,21 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
   bool isGeneratingHistory = false;
   String patientId = '';
   Map<String, bool> isGeneratingHistoryMap = {};
+  bool isLoadingFullScreen = false;
+
+  Future<void> _generateFullScreenLoading(Function action) async {
+    setState(() {
+      isLoadingFullScreen = true;
+    });
+
+    try {
+      await action();
+    } finally {
+      setState(() {
+        isLoadingFullScreen = false;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -165,13 +89,15 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
     }
   }
 
-  Future<String> generateMedicalHistory(
+  Future<Map<String, dynamic>> generateMedicalHistory(
       String patientId, List<dynamic> sumarizacoes) async {
     setState(() {
       isGeneratingHistoryMap[patientId] = true;
     });
+
     try {
-      final history = await recordingService.generateMedicalHistory(
+      final Map<String, dynamic> history =
+          await recordingService.generateMedicalHistory(
         patientId: patientId,
         sumarizacoes: sumarizacoes,
       );
@@ -191,7 +117,8 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
           backgroundColor: Colors.red,
         ),
       );
-      return ''; // Retorna uma string vazia em caso de erro
+
+      return {};
     } finally {
       setState(() {
         isGeneratingHistoryMap[patientId] = false;
@@ -234,50 +161,63 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          "Histórico de Pacientes",
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
+    return Stack(
+      children: [
+        Scaffold(
+          extendBodyBehindAppBar: true,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            centerTitle: true,
+            title: const Text(
+              "Histórico de Pacientes",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          body: BackgroundContainer(
+            child: SafeArea(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : errorMessage != null
+                      ? _buildErrorContent()
+                      : Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: SearchField(
+                                onSearch: (value) {
+                                  setState(() {
+                                    searchQuery = value;
+                                    _filterRecordings();
+                                  });
+                                },
+                                label: "Buscar por nome",
+                              ),
+                            ),
+                            Expanded(
+                              child: filteredRecordings.isEmpty
+                                  ? _buildNoRecordingsContent()
+                                  : _buildMinimalistRecordingsContent(),
+                            ),
+                          ],
+                        ),
+            ),
           ),
         ),
-      ),
-      body: BackgroundContainer(
-        child: SafeArea(
-          child: isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : errorMessage != null
-                  ? _buildErrorContent()
-                  : Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: SearchField(
-                            onSearch: (value) {
-                              setState(() {
-                                searchQuery = value;
-                                _filterRecordings();
-                              });
-                            },
-                            label: "Buscar por nome",
-                          ),
-                        ),
-                        Expanded(
-                          child: filteredRecordings.isEmpty
-                              ? _buildNoRecordingsContent()
-                              : _buildMinimalistRecordingsContent(),
-                        ),
-                      ],
-                    ),
-        ),
-      ),
+        if (isLoadingFullScreen)
+          Container(
+            color: Colors.black.withOpacity(0.5),
+            child: const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+          )
+      ],
     );
   }
 
@@ -287,9 +227,13 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
       itemCount: filteredRecordings.length,
       itemBuilder: (context, index) {
         final procedure = filteredRecordings[index];
-        final pacienteInfo = procedure['paciente_info'];
-        final gravacoes = procedure['gravacoes'] as List<dynamic>;
+        final pacienteInfo = procedure['paciente_info'] ?? {};
+        final gravacoes = procedure['gravacoes'] as List<dynamic>? ?? [];
         final sumarizacoes = gravacoes.map((g) => g['sumarizacao']).toList();
+
+        // Verifica se paciente_id existe
+        final String? patientId =
+            gravacoes.isNotEmpty ? gravacoes[0]['paciente_id'] : null;
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 8.0),
@@ -316,20 +260,36 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      icon: Icon(Icons.history, color: Colors.blue.shade700),
-                      onPressed: () async {
-                        final historyText = await generateMedicalHistory(
-                            patientId, sumarizacoes);
+                    if (patientId != null)
+                      IconButton(
+                        icon: Icon(Icons.history, color: Colors.blue.shade700),
+                        onPressed: () async {
+                          await _generateFullScreenLoading(() async {
+                            final Map<String, dynamic> history =
+                                await generateMedicalHistory(
+                                    patientId, sumarizacoes);
 
-                        if (historyText.isNotEmpty) {
-                          generatePdf(
-                            pacienteInfo['name'] ?? 'Paciente desconhecido',
-                            historyText,
-                          );
-                        }
-                      },
-                    ),
+                            if (history.isNotEmpty) {
+                              generatePdf(pacienteInfo, history);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Resumo clínico gerado com sucesso!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          });
+                        },
+                      ),
+                    if (patientId == null)
+                      const Text(
+                        'ID do paciente ausente',
+                        style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold),
+                      ),
                     const Text(
                       'Gerar resumo clínico',
                       style: TextStyle(
@@ -427,4 +387,142 @@ class _ManageRecordingsScreenState extends State<ManageRecordingsScreen> {
       ),
     );
   }
+}
+
+Future<void> generatePdf(Map<String, dynamic> patientInfo,
+    Map<String, dynamic> medicalSummary) async {
+  final pdf = pw.Document();
+  final String date = DateFormat('dd/MM/yyyy').format(DateTime.now());
+
+  final fontData = await rootBundle.load('assets/Roboto-Regular.ttf');
+  final fontBoldData = await rootBundle.load('assets/Roboto-Bold.ttf');
+  final font = pw.Font.ttf(fontData);
+  final fontBold = pw.Font.ttf(fontBoldData);
+
+  final image = await imageFromAssetBundle('assets/logo.png');
+
+  pdf.addPage(
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(20),
+      build: (pw.Context context) => [
+        // Header
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            image != null ? pw.Image(image, height: 50) : pw.SizedBox(),
+            pw.Text(
+              'Resumo Médico',
+              style: pw.TextStyle(
+                fontSize: 20,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.blue,
+              ),
+            ),
+            pw.Text(
+              'Data: $date',
+              style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 10),
+        pw.Divider(),
+        pw.SizedBox(height: 10),
+
+        // Patient Info
+        _buildSectionTitle('Dados do Paciente:', fontBold),
+        pw.SizedBox(height: 5),
+        pw.Text('Nome: ${patientInfo['name'] ?? 'Paciente desconhecido'}',
+            style: pw.TextStyle(font: font, fontSize: 14)),
+        pw.Text(
+            'Data de Nascimento: ${patientInfo['birth_date'] ?? 'Não informado'}',
+            style: pw.TextStyle(font: font, fontSize: 14)),
+        pw.Text('Gênero: ${patientInfo['gender'] ?? 'Não informado'}',
+            style: pw.TextStyle(font: font, fontSize: 14)),
+        pw.Text('CPF: ${patientInfo['cpf'] ?? 'Não informado'}',
+            style: pw.TextStyle(font: font, fontSize: 14)),
+        pw.Text('Contato: ${patientInfo['contact'] ?? 'Não informado'}',
+            style: pw.TextStyle(font: font, fontSize: 14)),
+        pw.Text(
+          'Endereço: ${patientInfo['address'] != null ? _formatAddress(patientInfo['address']) : 'Não informado'}',
+          style: pw.TextStyle(font: font, fontSize: 14),
+        ),
+        pw.SizedBox(height: 10),
+        pw.Divider(),
+
+        // Medical Summary Sections
+        ...medicalSummary.entries.map((entry) {
+          final sectionTitle = _formatSectionTitle(entry.key);
+          final sectionContent = entry.value ?? 'Sem informações disponíveis.';
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _buildSectionTitle(sectionTitle, fontBold),
+              pw.SizedBox(height: 5),
+              pw.Text(
+                sectionContent,
+                style: pw.TextStyle(font: font, fontSize: 14),
+              ),
+              pw.SizedBox(height: 15),
+            ],
+          );
+        }),
+
+        pw.Divider(),
+
+        // Footer
+        pw.Align(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Text(
+            'Gerado em: $date',
+            style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey),
+          ),
+        ),
+      ],
+      footer: (pw.Context context) {
+        return pw.Container(
+          alignment: pw.Alignment.centerRight,
+          margin: const pw.EdgeInsets.only(top: 1.0 * PdfPageFormat.cm),
+          child: pw.Text(
+            'Página ${context.pageNumber} de ${context.pagesCount}',
+            style: const pw.TextStyle(color: PdfColors.grey, fontSize: 12),
+          ),
+        );
+      },
+    ),
+  );
+
+  await Printing.layoutPdf(
+    onLayout: (PdfPageFormat format) async => pdf.save(),
+  );
+}
+
+pw.Widget _buildSectionTitle(String title, pw.Font fontBold) {
+  return pw.Text(
+    title,
+    style: pw.TextStyle(
+      font: fontBold,
+      fontSize: 18,
+      fontWeight: pw.FontWeight.bold,
+      color: PdfColors.blueAccent,
+    ),
+  );
+}
+
+String _formatAddress(Map<String, dynamic> address) {
+  return '${address['street'] ?? ''}, ${address['number'] ?? ''}, '
+      '${address['city'] ?? ''} - ${address['state'] ?? ''}. '
+      '${address['zip'] ?? ''}';
+}
+
+String _formatSectionTitle(String key) {
+  final mapping = {
+    'repeated_symptoms_and_complaints': 'Sintomas e Queixas Repetidas',
+    'aggregated_medical_history': 'Histórico Médico Agregado',
+    'frequent_diagnoses': 'Diagnósticos Frequentes',
+    'most_used_treatments_and_procedures':
+        'Tratamentos e Procedimentos Mais Utilizados',
+    'recommendations_and_follow_ups': 'Recomendações e Acompanhamentos',
+  };
+  return mapping[key] ?? key; // Retorna o título amigável ou a chave original
 }

@@ -100,7 +100,7 @@ class RecordingService {
     }
   }
 
-  Future<String> generateMedicalHistory({
+  Future<Map<String, dynamic>> generateMedicalHistory({
     required String patientId,
     required List<dynamic> sumarizacoes,
   }) async {
@@ -116,10 +116,10 @@ class RecordingService {
     );
 
     if (response.statusCode == 200) {
-      final responseBody = jsonDecode(response.body);
-      return responseBody ?? 'Histórico médico indisponível';
+      final Map<String, dynamic> responseBody = jsonDecode(response.body);
+      return responseBody;
     } else {
-      throw Exception('Erro ao gerar o histórico médico');
+      throw Exception('Erro ao gerar o histórico médico: ${response.body}');
     }
   }
 }
