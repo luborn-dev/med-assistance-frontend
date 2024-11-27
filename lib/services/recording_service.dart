@@ -1,78 +1,125 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:http_parser/http_parser.dart';
 
 class RecordingService {
-  static const String baseUrl = 'http://172.20.10.3:8000/api/procedures';
-  static const String patientsBaseUrl = 'http://172.20.10.3:8000/api/patients';
-  static const String doctorsBaseUrl = 'http://172.20.10.3:8000/api/doctors';
+  final String _baseUrl;
+  final String _proceduresEndpoint;
+  final String _medicalHistoryEndpoint;
 
-  static Future<List<dynamic>> fetchRecordings(String doctorId) async {
+  RecordingService()
+      : _baseUrl = dotenv.env['API_BASE_PATH_URL'] ??
+            (throw Exception("API_BASE_PATH_URL is not set in .env")),
+        _proceduresEndpoint = dotenv.env['PROCEDURES_ENDPOINT'] ??
+            (throw Exception("PROCEDURES_ENDPOINT is not set in .env")),
+        _medicalHistoryEndpoint = dotenv.env["MEDICAL_HISTORY_ENDPOINT"] ??
+            (throw Exception("MEDICAL_HISTORY_ENDPOINT is not set in .env"));
+
+  Future<List<dynamic>> fetchRecordings() async {
     final response = await http.get(
-      Uri.parse('$baseUrl?doctor_id=$doctorId'),
+      Uri.parse('$_baseUrl/$_proceduresEndpoint'),
       headers: {'Content-Type': 'application/json; charset=UTF-8'},
     );
 
     if (response.statusCode == 200) {
-      List<dynamic> recordings = json.decode(utf8.decode(response.bodyBytes));
+      List<dynamic> recordings = jsonDecode(utf8.decode(response.bodyBytes));
 
-      // Agora buscamos os detalhes dos pacientes e médicos usando o ID
-      for (var recording in recordings) {
-        // Busca detalhes do paciente pelo ID do paciente
-        final patientId = recording[
-            'patient_id']; // Certifique-se que o 'patient_id' é parte do objeto recording
-        final patientResponse = await http.get(
-          Uri.parse('$patientsBaseUrl/$patientId'),
-          headers: {'Content-Type': 'application/json; charset=UTF-8'},
-        );
-
-        if (patientResponse.statusCode == 200) {
-          var patientData = json.decode(utf8.decode(patientResponse.bodyBytes));
-          recording['patient_birthdate'] = patientData['birthdate'];
-          recording['patient_address'] = patientData['address'];
-          recording['patient_cpf'] = patientData['cpf'];
-          recording['patient_phone'] = patientData['phone'];
-        }
-
-        // Busca detalhes do médico pelo ID
-        final doctorResponse = await http.get(
-          Uri.parse('$doctorsBaseUrl/${recording['doctorId']}'),
-          headers: {'Content-Type': 'application/json; charset=UTF-8'},
-        );
-
-        if (doctorResponse.statusCode == 200) {
-          var doctorData = json.decode(utf8.decode(doctorResponse.bodyBytes));
-          recording['doctor_name'] = doctorData['username'];
-          recording['doctor_email'] = doctorData['email'];
-          recording['doctor_affiliation'] = doctorData['affiliation'];
-        }
-      }
+      recordings = recordings.map((recording) {
+        recording['data_gravacao'] = recording['data_gravacao'] != null
+            ? DateTime.parse(recording['data_gravacao'] as String)
+            : null;
+        return recording;
+      }).toList();
 
       return recordings;
-    } else if (response.statusCode == 404) {
-      return [];
-    } else if (response.statusCode == 401) {
-      throw Exception('Não autorizado. Por favor, faça login novamente.');
     } else {
-      throw Exception(
-          'Erro ao carregar gravações: ${response.statusCode} - ${response.reasonPhrase}');
+      throw Exception('Erro ao carregar gravações');
     }
   }
 
-  static Future<void> deleteRecording(String recordingId) async {
+  Future<void> deleteRecording(String procedureId, String recordingId) async {
     final response = await http.delete(
-      Uri.parse('$baseUrl/$recordingId'),
+      Uri.parse(
+          '$_baseUrl/$_proceduresEndpoint/$procedureId/recordings/$recordingId'),
       headers: {'Content-Type': 'application/json; charset=UTF-8'},
     );
 
     if (response.statusCode == 200) {
       return;
     } else if (response.statusCode == 404) {
-      throw Exception('Procedimento não encontrado.');
-    } else if (response.statusCode == 401) {
-      throw Exception('Não autorizado a deletar este procedimento.');
+      throw Exception('Gravação não encontrada.');
     } else {
       throw Exception(
           'Falha ao deletar gravação: ${response.statusCode} - ${response.reasonPhrase}');
+    }
+  }
+
+  Future<void> sendRecording({
+    required Map<String, dynamic> procedureData,
+    required File recordingFile,
+    required BuildContext context,
+  }) async {
+    final apiUrl = '$_baseUrl/$_proceduresEndpoint/upload';
+
+    if (!await recordingFile.exists()) {
+      throw Exception("Arquivo de gravação não encontrado.");
+    }
+
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
+
+      request.fields['paciente_id'] = procedureData['paciente_id'];
+      request.fields['medico_id'] = procedureData['medico_id'];
+      request.fields['tipo'] = procedureData['tipo'];
+      request.fields['procedimento'] = procedureData['procedimento'];
+      request.fields['transcricao'] = '';
+      request.fields['sumarizacao'] = '';
+
+      request.files.add(await http.MultipartFile.fromPath(
+        'arquivo_audio',
+        recordingFile.path,
+        contentType: MediaType('audio', 'm4a'),
+      ));
+
+      var response = await request.send();
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Gravação enviada com sucesso.")),
+        );
+      } else {
+        final responseBody = await response.stream.bytesToString();
+        final error = jsonDecode(responseBody)['detail'] ?? 'Erro desconhecido';
+        throw Exception('Erro ao enviar a gravação: $error');
+      }
+    } catch (e) {
+      throw Exception('Erro ao enviar a gravação: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> generateMedicalHistory({
+    required String patientId,
+    required List<dynamic> sumarizacoes,
+  }) async {
+    final url = Uri.parse('$_baseUrl/$_medicalHistoryEndpoint');
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'patientId': patientId,
+        'sumarizacoes': sumarizacoes,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseBody = jsonDecode(response.body);
+      return responseBody;
+    } else {
+      throw Exception('Erro ao gerar o histórico médico: ${response.body}');
     }
   }
 }

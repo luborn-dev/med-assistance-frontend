@@ -149,7 +149,7 @@ const List<String> cirurgias = [
   'Cirurgia de cisto epidermoide',
   'Cirurgia de cisto tireóide',
   'Cirurgia de cisto timético'
-  // Adicione todas as outras opções aqui
+
 ];
 
 const List<String> consultas = [
@@ -354,5 +354,4 @@ const List<String> consultas = [
   'Consulta de controle de saúde do trabalhador da área de arquitetura',
   'Consulta de controle de saúde do trabalhador da área de direito'
 
-  // Adicione todas as outras opções aqui
 ];
