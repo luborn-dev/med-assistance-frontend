@@ -25,15 +25,6 @@ class PDFExporter {
     final pdf = pw.Document();
     final String date = DateFormat('dd/MM/yyyy').format(DateTime.now());
 
-    String patientBirthdateFormatted;
-    try {
-      DateFormat format = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
-      DateTime parsedDate = format.parse(patientBirthdate);
-      patientBirthdateFormatted = DateFormat('dd/MM/yyyy').format(parsedDate);
-    } catch (e) {
-      patientBirthdateFormatted = 'Data de nascimento inválida';
-    }
-
     final image = await imageFromAssetBundle('assets/logo.png');
 
     pdf.addPage(
@@ -62,18 +53,16 @@ class PDFExporter {
           pw.SizedBox(height: 10),
           pw.Divider(),
           pw.SizedBox(height: 10),
-
           _buildSectionTitle('Informações do Paciente:'),
           pw.SizedBox(height: 5),
           pw.Text('Nome: $patientName'),
-          pw.Text('Data de Nascimento: $patientBirthdateFormatted'),
+          pw.Text('Data de Nascimento: $patientBirthdate'),
           pw.Text(
               'Endereço: $patientStreet, $patientNumber - $patientCity/$patientState'),
           pw.Text('CPF: $patientCpf'),
           pw.Text('Telefone: $patientPhone'),
           pw.SizedBox(height: 10),
           pw.Divider(),
-
           _buildSectionTitle('Informações do Médico:'),
           pw.SizedBox(height: 5),
           pw.Text('Nome: $doctorName'),
@@ -81,20 +70,17 @@ class PDFExporter {
           pw.Text('Afiliação: $doctorAffiliation'),
           pw.SizedBox(height: 10),
           pw.Divider(),
-
           _buildSectionTitle('Informações do Procedimento:'),
           pw.SizedBox(height: 5),
           pw.Text('Tipo de Procedimento: $procedureType'),
           pw.Text('Nome Exato do Procedimento: $exactProcedureName'),
           pw.SizedBox(height: 10),
           pw.Divider(),
-
           _buildSectionTitle('Sumário do Procedimento:'),
           pw.SizedBox(height: 10),
           pw.Text(summarize.isNotEmpty ? summarize : 'Sem sumário disponível'),
           pw.SizedBox(height: 20),
           pw.Divider(),
-
           pw.Align(
             alignment: pw.Alignment.centerRight,
             child: pw.Text(
