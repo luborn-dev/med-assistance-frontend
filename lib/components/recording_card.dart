@@ -111,23 +111,32 @@ class RecordingCard extends StatelessWidget {
   }
 
   void _onExportPDF() {
+    final Map<String, dynamic> summarizeDynamic = recording['sumarizacao'] ?? {};
+
+    // Convertendo os valores para String
+    final Map<String, String> summarize = summarizeDynamic.map(
+          (key, value) => MapEntry(key, value?.toString() ?? ''),
+    );
+
     PDFExporter.exportToPDF(
-      recording['tipo'] ?? '',
-      recording['procedimento'] ?? '',
-      pacienteInfo['name'] ?? '',
-      pacienteInfo['birth_date'] ?? '',
-      pacienteInfo['address']["street"] ?? '',
-      pacienteInfo['address']["city"] ?? '',
-      pacienteInfo['address']["state"] ?? '',
-      pacienteInfo['address']["cep"] ?? '',
-      pacienteInfo['address']["number"] ?? '',
-      pacienteInfo['cpf'] ?? '',
-      pacienteInfo['contact'] ?? '',
-      recording['medico_info']?['name'] ?? '',
-      recording['medico_info']?['email'] ?? '',
-      recording['medico_info']?['professional_id'] ?? '',
-      recording['transcricao'] ?? '',
-      recording['sumarizacao'] ?? '',
+      procedureType: recording['tipo'] ?? '',
+      exactProcedureName: recording['procedimento'] ?? '',
+      patientName: pacienteInfo['name'] ?? '',
+      patientBirthdate: pacienteInfo['birth_date'] ?? '',
+      patientStreet: pacienteInfo['address']?["street"] ?? '',
+      patientCity: pacienteInfo['address']?["city"] ?? '',
+      patientState: pacienteInfo['address']?["state"] ?? '',
+      patientCep: pacienteInfo['address']?["cep"] ?? '',
+      patientNumber: pacienteInfo['address']?["number"] ?? '',
+      patientCpf: pacienteInfo['cpf'] ?? '',
+      patientPhone: pacienteInfo['contact'] ?? '',
+      doctorName: recording['medico_info']?['name'] ?? '',
+      doctorEmail: recording['medico_info']?['email'] ?? '',
+      doctorAffiliation: recording['medico_info']?['professional_id'] ?? '',
+      transcription: recording['transcricao'] ?? '',
+      summarize: summarize,
     );
   }
+
+
 }
